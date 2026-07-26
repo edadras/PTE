@@ -10,11 +10,13 @@ use App\Domain\Assessment\Models\PracticeSession;
 use App\Domain\Identity\Models\Student;
 use App\Domain\Learning\Models\Question;
 use App\Domain\Learning\Models\QuestionBank;
+use App\Domain\Telegram\Models\TelegramBot;
+use App\Domain\Tenancy\Concerns\BelongsToAcademy;
 use App\Domain\Tenancy\Exceptions\TenantNotResolvedException;
 use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Tenancy\TenantContext;
-use App\Domain\Telegram\Models\TelegramBot;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -123,13 +125,13 @@ final class TenantIsolationTest extends TestCase
     }
 
     #[Test]
-    #[\PHPUnit\Framework\Attributes\DataProvider('tenantScopedModels')]
+    #[DataProvider('tenantScopedModels')]
     public function every_tenant_model_carries_the_global_scope(string $model): void
     {
         $instance = new $model;
 
         $this->assertContains(
-            \App\Domain\Tenancy\Concerns\BelongsToAcademy::class,
+            BelongsToAcademy::class,
             class_uses_recursive($model),
             "{$model} is tenant data but does not use BelongsToAcademy."
         );

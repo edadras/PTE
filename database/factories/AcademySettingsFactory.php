@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Domain\Tenancy\Models\AcademySettings;
+use Database\Factories\Concerns\ResolvesAcademy;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 final class AcademySettingsFactory extends Factory
 {
-    use \Database\Factories\Concerns\ResolvesAcademy;
+    use ResolvesAcademy;
 
     protected $model = AcademySettings::class;
 

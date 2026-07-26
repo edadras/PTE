@@ -91,6 +91,11 @@ return [
     */
 
     'ai' => [
+        // What the platform expects to spend across all tenants in a month.
+        // The Super Admin gauge reads this; without a number to compare against,
+        // a spend chart tells you nothing until the invoice arrives.
+        'monthly_budget_usd' => (float) env('PTE_AI_MONTHLY_BUDGET_USD', 2500),
+
         'default_temperature' => 0.3,
         'default_max_output_tokens' => 1200,
         'request_timeout' => 60,

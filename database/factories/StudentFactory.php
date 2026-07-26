@@ -7,6 +7,7 @@ namespace Database\Factories;
 use App\Domain\Identity\Enums\StudentSource;
 use App\Domain\Identity\Enums\StudentStatus;
 use App\Domain\Identity\Models\Student;
+use Database\Factories\Concerns\ResolvesAcademy;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -15,7 +16,7 @@ use Illuminate\Support\Str;
  */
 final class StudentFactory extends Factory
 {
-    use \Database\Factories\Concerns\ResolvesAcademy;
+    use ResolvesAcademy;
 
     protected $model = Student::class;
 

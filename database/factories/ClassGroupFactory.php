@@ -7,6 +7,7 @@ namespace Database\Factories;
 use App\Domain\Identity\Enums\ClassGroupStatus;
 use App\Domain\Identity\Models\ClassGroup;
 use App\Models\User;
+use Database\Factories\Concerns\ResolvesAcademy;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 final class ClassGroupFactory extends Factory
 {
-    use \Database\Factories\Concerns\ResolvesAcademy;
+    use ResolvesAcademy;
 
     protected $model = ClassGroup::class;
 

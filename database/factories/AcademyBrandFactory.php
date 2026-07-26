@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Domain\Tenancy\Enums\DarkMode;
 use App\Domain\Tenancy\Models\AcademyBrand;
+use Database\Factories\Concerns\ResolvesAcademy;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -14,7 +15,7 @@ use Illuminate\Support\Str;
  */
 final class AcademyBrandFactory extends Factory
 {
-    use \Database\Factories\Concerns\ResolvesAcademy;
+    use ResolvesAcademy;
 
     protected $model = AcademyBrand::class;
 

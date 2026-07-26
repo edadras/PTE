@@ -7,6 +7,8 @@ use App\Domain\Audit\OpsServiceProvider;
 use App\Domain\Identity\Providers\AuthorizationServiceProvider;
 use App\Domain\Integration\Providers\IntegrationServiceProvider;
 use App\Providers\AppServiceProvider;
+use App\Providers\Filament\AcademyPanelProvider;
+use App\Providers\Filament\PlatformPanelProvider;
 use App\Providers\RateLimitServiceProvider;
 
 return [
@@ -16,4 +18,6 @@ return [
     IntegrationServiceProvider::class,
     OpsServiceProvider::class,
     RateLimitServiceProvider::class,
+    PlatformPanelProvider::class,
+    AcademyPanelProvider::class,
 ];
