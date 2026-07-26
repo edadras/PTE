@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\AI\Jobs\DetectAiCostAnomalies;
 use App\Domain\AI\Jobs\ScoringConsistencyAudit;
+use App\Domain\AI\Models\AiLog;
 use App\Domain\Assessment\Jobs\ExpireOverdueExamSessions;
 use App\Domain\Commerce\Jobs\CheckSubscriptionExpiry;
 use App\Domain\Commerce\Jobs\DetectUnprofitableAcademies;
@@ -11,8 +12,8 @@ use App\Domain\Commerce\Jobs\RollUpUsageCounters;
 use App\Domain\Commerce\Jobs\SendRenewalReminders;
 use App\Domain\Commerce\Jobs\SuspendPastDueAcademies;
 use App\Domain\Learning\Jobs\RecalculateDifficultyIndex;
-use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Telegram\Jobs\CheckBotHealth;
+use App\Domain\Tenancy\Models\Academy;
 use Illuminate\Support\Facades\Schedule;
 
 /*
@@ -73,6 +74,12 @@ Schedule::call(function () use ($forEachActiveAcademy): void {
 })->weeklyOn(0, '05:00')->name('ai:consistency')->withoutOverlapping();
 
 Schedule::job(new DetectAiCostAnomalies)->dailyAt('03:00')->name('ai:cost-anomalies');
+
+// ai_logs holds rendered prompts, which means student text. It exists only to
+// debug a bad score, so it is pruned aggressively rather than kept "just in case".
+Schedule::call(static fn (): int => AiLog::query()->withoutGlobalScopes()->expired()->delete())
+    ->dailyAt('04:30')
+    ->name('ai:prune-logs');
 
 // --- Commerce -------------------------------------------------------------
 

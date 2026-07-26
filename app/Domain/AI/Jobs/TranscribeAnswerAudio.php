@@ -12,6 +12,7 @@ use App\Domain\AI\Services\CostMeter;
 use App\Domain\AI\Services\ProviderRegistry;
 use App\Domain\AI\Services\ProviderResolver;
 use App\Domain\Assessment\Models\Answer;
+use App\Domain\Assessment\Services\ScoringDispatcher;
 use App\Domain\Shared\Jobs\TenantAwareJob;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -121,6 +122,19 @@ final class TranscribeAnswerAudio extends TenantAwareJob
         $answer->transcript = $result->text;
         $answer->transcript_meta = $meta;
         $answer->save();
+
+        /*
+         | Not every spoken task needs a model to grade it. Answer Short Question
+         | has a fixed set of accepted answers, so once we have the transcript a
+         | deterministic scorer settles it for free and instantly. Handing every
+         | voice answer to ScoreAnswerWithAi would quietly pay for inference on
+         | a task type the design explicitly routes away from it (ADR-006).
+         */
+        if (! $answer->questionType()->requiresAi()) {
+            app(ScoringDispatcher::class)->retry($answer);
+
+            return;
+        }
 
         ScoreAnswerWithAi::dispatch($this->academyId, $this->answerId);
     }
