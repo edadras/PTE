@@ -2,7 +2,63 @@
 
 پلتفرمی White-Label و Multi-Tenant که به هر آموزشگاه زبان اجازه می‌دهد با **برند خودش** و **ربات تلگرام اختصاصی خودش** آزمون، تمرین و تصحیح هوشمند (AI) ارائه دهد — و در فازهای بعد همان هسته، اپلیکیشن موبایل و وب‌اپ دانشجویی را هم تغذیه می‌کند.
 
-> وضعیت فعلی مخزن: **فاز طراحی (Design Phase)**. در این مرحله فقط اسناد معماری و نقشه راه نوشته شده و هنوز کدی پیاده‌سازی نشده است.
+> وضعیت فعلی مخزن: **پیاده‌سازی شده**. اسناد معماری در `docs/` و کد در `app/Domain/`.
+> ۲۸۵ تست سبز · ۶۸ migration · ۱۵۵ route · ۱۵ دستور Artisan · ۱۷ کار زمان‌بندی‌شده.
+
+---
+
+## راه‌اندازی سریع
+
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+
+docker compose up -d          # MySQL · Redis ×2 · MinIO · Mailpit
+
+php artisan migrate
+php artisan db:seed           # پلن‌ها، ماژول‌ها، Permissionها، مدل‌های AI، Promptهای پیش‌فرض
+
+php artisan academy:create "English First" owner@example.com
+php artisan telegram:register-webhook 1
+
+php artisan serve             # پنل: /panel   ·   Super Admin: /platform
+php artisan horizon           # صف‌ها
+```
+
+```bash
+php artisan test                      # کل تست‌ها
+php artisan test --testsuite=Tenancy  # تست‌های جداسازی مستاجر (blocking در CI)
+./vendor/bin/pint --test              # سبک کد
+./vendor/bin/phpstan analyse          # تحلیل ایستا
+```
+
+---
+
+## ساختار کد
+
+```
+app/
+  Domain/
+    Tenancy/        آموزشگاه، برند، دامنه، ماژول‌ها · TenantContext · BelongsToAcademy
+    Identity/       کاربر، نقش، Permission، دانشجو، کلاس، API Key
+    Telegram/       Multi-Bot · Webhook · MenuEngine · FlowEngine · MessageSender
+    Learning/       بانک سوال · ۱۷ نوع تمرین PTE · انتخاب تطبیقی · Import
+    Assessment/     تمرین، آزمون، پاسخ · ۶ Scorer الگوریتمی · Override مدرس
+    AI/             Gateway · ۵ Provider · Prompt/Rubric نسخه‌دار · CostMeter
+    Commerce/       پلن، اشتراک، Quota، ۵ درگاه پرداخت، فاکتور
+    Integration/    REST API · Webhook خروجی
+    Support/        تیکت · تاریخچه گفتگو
+    Reporting/      داشبورد · Export · کارنامه · Archive
+    Audit/          ActivityLog · PlatformAuditLog · Retention
+    Notification/   چندکاناله · محتوای زمان‌بندی‌شده (در timezone آموزشگاه)
+    Shared/         TenantAwareJob · TenantKey
+  Filament/         پنل Platform و پنل Academy
+  Http/             Controllerها و Resourceهای API
+  Console/Commands/ ۱۵ دستور عملیاتی
+```
+
+قراردادهای کدنویسی و قواعد غیرقابل‌مذاکره چندمستاجری در [`CONVENTIONS.md`](CONVENTIONS.md).
 
 ---
 
