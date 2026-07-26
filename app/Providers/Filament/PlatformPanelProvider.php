@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Providers\Filament;
 
 use App\Filament\Platform\Pages\PlatformDashboard;
+use App\Filament\Support\Middleware\AuthenticatePanel;
 use App\Filament\Support\Middleware\EnsureSuperAdmin;
-use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -78,7 +78,7 @@ final class PlatformPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->authMiddleware([
-                Authenticate::class,
+                AuthenticatePanel::class,
                 EnsureSuperAdmin::class,
             ], isPersistent: true);
     }

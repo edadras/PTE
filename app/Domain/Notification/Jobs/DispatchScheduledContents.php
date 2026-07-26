@@ -68,6 +68,8 @@ final class DispatchScheduledContents implements ShouldQueue
         // firing in the same minute is a hundred otherwise-identical lookups.
         $academies = Academy::query()
             ->withoutGlobalScopes()
+            // TenantContext::set() reads both when it resolves the locale.
+            ->with(['settings', 'brand'])
             ->whereIn('id', $due->pluck('academy_id')->unique()->all())
             ->get()
             ->keyBy(static fn (Academy $academy): int => (int) $academy->getKey());

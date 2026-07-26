@@ -98,7 +98,9 @@ final class TelegramHealthCheckCommand extends Command
     private function targets(?string $academyReference): array
     {
         $academies = $academyReference === null
-            ? Academy::query()->withoutGlobalScopes()->whereNull('deleted_at')->get()->keyBy(fn (Academy $a): int => (int) $a->getKey())
+            // settings/brand are read by TenantContext::set(); eager-loading
+            // them keeps strict mode's lazy-loading guard out of the way.
+            ? Academy::query()->withoutGlobalScopes()->with(['settings', 'brand'])->whereNull('deleted_at')->get()->keyBy(fn (Academy $a): int => (int) $a->getKey())
             : collect(array_filter([$this->requireAcademy($academyReference, withTrashed: false)]))
                 ->keyBy(fn (Academy $a): int => (int) $a->getKey());
 

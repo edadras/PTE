@@ -226,10 +226,12 @@ final class AcademyArchiver
      */
     private function allTables(): array
     {
-        return array_map(
-            static fn (mixed $table): string => is_array($table) ? (string) ($table['name'] ?? '') : (string) $table,
-            Schema::getTableListing(),
-        );
+        // Unqualified: SQLite reports `main.students` and MySQL `db.students`,
+        // and neither form can be handed back to hasColumn() or to a query.
+        return array_values(array_filter(
+            Schema::getTableListing(schemaQualified: false),
+            static fn (string $table): bool => $table !== '',
+        ));
     }
 
     /**

@@ -183,7 +183,10 @@ final class RetentionSweeper
 
         Academy::query()
             ->withoutGlobalScopes()
-            ->with('settings')
+            // Both relations are read by TenantContext::set() when it resolves
+            // the locale; without them, entering a tenant from inside a chunk
+            // trips strict mode's lazy-loading guard.
+            ->with(['settings', 'brand'])
             ->chunkById(50, function ($academies) use ($now, $dryRun, &$removed): void {
                 foreach ($academies as $academy) {
                     $removed += TenantContext::runFor(
@@ -239,6 +242,7 @@ final class RetentionSweeper
     {
         return Academy::query()
             ->withoutGlobalScopes()
+            ->with(['settings', 'brand'])
             ->whereIn('id', array_map(intval(...), $ids))
             ->get()
             ->keyBy(static fn (Academy $academy): int => (int) $academy->getKey())

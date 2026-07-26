@@ -9,9 +9,9 @@ use App\Filament\Academy\Pages\AcademyDashboard;
 use App\Filament\Support\BrandContext;
 use App\Filament\Support\Http\StartImpersonationController;
 use App\Filament\Support\Http\StopImpersonationController;
+use App\Filament\Support\Middleware\AuthenticatePanel;
 use App\Filament\Support\Middleware\EnforceImpersonationWindow;
 use App\Filament\Support\Middleware\EnsureAcademyMember;
-use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -111,7 +111,7 @@ final class AcademyPanelProvider extends PanelProvider
                 EnforceImpersonationWindow::class,
             ], isPersistent: true)
             ->authMiddleware([
-                Authenticate::class,
+                AuthenticatePanel::class,
                 EnsureAcademyMember::class,
             ], isPersistent: true);
     }

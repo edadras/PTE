@@ -8,6 +8,7 @@ use App\Domain\Reporting\Enums\StatMetric;
 use App\Domain\Tenancy\Concerns\BelongsToAcademy;
 use Database\Factories\DailyStatFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -36,10 +37,28 @@ final class DailyStat extends Model
     protected function casts(): array
     {
         return [
-            'date' => 'date',
             'value' => 'float',
             'meta' => 'array',
         ];
+    }
+
+    /**
+     * Deliberately not a `date` cast.
+     *
+     * Laravel writes date-cast attributes with the connection's full datetime
+     * format, so the column ends up holding `2026-07-19 00:00:00` on SQLite.
+     * The unique key and every dashboard lookup compare against `2026-07-19`,
+     * and the mismatch shows up as duplicate rows rather than as an error.
+     * Storing the date-only string keeps both sides honest.
+     */
+    protected function date(): Attribute
+    {
+        return Attribute::make(
+            get: static fn (mixed $value): Carbon => Carbon::parse((string) $value)->startOfDay(),
+            set: static fn (Carbon|string $value): string => ($value instanceof Carbon
+                ? $value
+                : Carbon::parse($value))->toDateString(),
+        );
     }
 
     /** Models live under app/Domain, so the default factory guesser misses. */
