@@ -90,7 +90,7 @@ final class TextComparatorTest extends TestCase
     {
         $this->assertSame(
             ["don't", 'worry', 'about', 'it'],
-            $this->comparator->tokenize("Don’t worry — about it!"),
+            $this->comparator->tokenize('Don’t worry — about it!'),
         );
     }
 

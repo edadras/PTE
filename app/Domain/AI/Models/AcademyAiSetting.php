@@ -55,7 +55,7 @@ final class AcademyAiSetting extends Model
 
     protected static function booted(): void
     {
-        static::saving(function (self $setting): void {
+        self::saving(function (self $setting): void {
             $key = $setting->api_key;
 
             $setting->api_key_last4 = filled($key) ? substr((string) $key, -4) : null;

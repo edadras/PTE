@@ -8,6 +8,7 @@ use App\Domain\AI\Enums\AiProvider;
 use App\Domain\AI\Enums\AiRequestStatus;
 use App\Domain\AI\Enums\AiTaskKey;
 use App\Domain\Tenancy\Concerns\BelongsToAcademy;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -83,7 +84,7 @@ final class AiRequest extends Model
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
-    public function scopeBetween(Builder $query, \DateTimeInterface $from, \DateTimeInterface $to): Builder
+    public function scopeBetween(Builder $query, DateTimeInterface $from, DateTimeInterface $to): Builder
     {
         return $query->whereBetween('created_at', [$from, $to]);
     }

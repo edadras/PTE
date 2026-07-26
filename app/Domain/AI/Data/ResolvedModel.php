@@ -7,11 +7,12 @@ namespace App\Domain\AI\Data;
 use App\Domain\AI\Enums\AiProvider;
 use App\Domain\AI\Enums\AiTaskKey;
 use App\Domain\AI\Models\AiModel;
+use App\Domain\AI\Services\ProviderResolver;
 
 /**
  * The outcome of "what should this academy's next call actually hit".
  *
- * @see \App\Domain\AI\Services\ProviderResolver
+ * @see ProviderResolver
  */
 final readonly class ResolvedModel
 {

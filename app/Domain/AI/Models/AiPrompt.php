@@ -11,10 +11,11 @@ use App\Domain\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property int|null $academy_id  null = platform default template
+ * @property int|null $academy_id null = platform default template
  * @property AiTaskKey $key
  * @property int $version
  * @property PromptStatus $status
@@ -23,8 +24,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property array<string, mixed>|null $output_schema
  * @property array<int, string>|null $variables
  * @property string|null $model_hint
- * @property \Illuminate\Support\Carbon|null $tested_at
- * @property \Illuminate\Support\Carbon|null $published_at
+ * @property Carbon|null $tested_at
+ * @property Carbon|null $published_at
  */
 final class AiPrompt extends Model
 {

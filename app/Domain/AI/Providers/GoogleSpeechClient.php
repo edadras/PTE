@@ -9,6 +9,7 @@ use App\Domain\AI\Data\TranscriptionRequest;
 use App\Domain\AI\Data\TranscriptionResult;
 use App\Domain\AI\Enums\AiProvider;
 use App\Domain\AI\Exceptions\ProviderUnavailableException;
+use RuntimeException;
 
 /**
  * Google Cloud Speech-to-Text (synchronous recognize).
@@ -37,7 +38,7 @@ final class GoogleSpeechClient extends AbstractProviderClient implements Transcr
             throw ProviderUnavailableException::transport(
                 $this->provider(),
                 $request->modelKey,
-                new \RuntimeException("Audio file [{$request->wavPath}] could not be read."),
+                new RuntimeException("Audio file [{$request->wavPath}] could not be read."),
             );
         }
 

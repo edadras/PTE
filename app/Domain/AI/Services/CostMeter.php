@@ -17,6 +17,7 @@ use App\Domain\Commerce\Services\QuotaGuard;
 use App\Domain\Shared\Support\TenantKey;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * The ledger. Every provider call lands here — successes, timeouts, refusals,
@@ -155,7 +156,7 @@ final class CostMeter
             $result = $guard->check($metric, $amount);
 
             return ! method_exists($result, 'allowed') || $result->allowed();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return true;
         }
     }
@@ -246,7 +247,7 @@ final class CostMeter
                 $guard->check($metric, $amount);
 
                 return;
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // Fall through to the local counter rather than lose the usage.
             }
         }
@@ -272,7 +273,7 @@ final class CostMeter
             return method_exists(QuotaGuard::class, 'forAcademy')
                 ? QuotaGuard::forAcademy($academyId)
                 : app(QuotaGuard::class);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
     }

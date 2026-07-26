@@ -92,7 +92,6 @@ final class ResponseValidator
 
     /**
      * @param  array<string, mixed>  $schema
-     *
      * @return array<int, string> empty when the payload conforms
      */
     public function violations(mixed $value, array $schema): array

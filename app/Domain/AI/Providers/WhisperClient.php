@@ -9,6 +9,7 @@ use App\Domain\AI\Data\TranscriptionRequest;
 use App\Domain\AI\Data\TranscriptionResult;
 use App\Domain\AI\Enums\AiProvider;
 use App\Domain\AI\Exceptions\ProviderUnavailableException;
+use RuntimeException;
 
 /**
  * Whisper ASR over the OpenAI-compatible /audio/transcriptions endpoint (the
@@ -33,7 +34,7 @@ final class WhisperClient extends AbstractProviderClient implements Transcriptio
             throw ProviderUnavailableException::transport(
                 $this->provider(),
                 $request->modelKey,
-                new \RuntimeException("Audio file [{$request->wavPath}] is not readable."),
+                new RuntimeException("Audio file [{$request->wavPath}] is not readable."),
             );
         }
 
@@ -43,7 +44,7 @@ final class WhisperClient extends AbstractProviderClient implements Transcriptio
             throw ProviderUnavailableException::transport(
                 $this->provider(),
                 $request->modelKey,
-                new \RuntimeException("Audio file [{$request->wavPath}] could not be opened."),
+                new RuntimeException("Audio file [{$request->wavPath}] could not be opened."),
             );
         }
 

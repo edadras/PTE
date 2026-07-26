@@ -14,9 +14,9 @@ namespace App\Domain\AI\Data;
 final readonly class ScoreBreakdown
 {
     /**
-     * @param  array<string, float>  $rawScores      criterion key => 0..100 as returned by the model
-     * @param  array<string, float>  $weightedScores criterion key => raw * weight / 100
-     * @param  array<string, int>  $weights          criterion key => weight
+     * @param  array<string, float>  $rawScores  criterion key => 0..100 as returned by the model
+     * @param  array<string, float>  $weightedScores  criterion key => raw * weight / 100
+     * @param  array<string, int>  $weights  criterion key => weight
      * @param  array<int, string>  $missingCriteria  criteria the model did not score
      */
     public function __construct(

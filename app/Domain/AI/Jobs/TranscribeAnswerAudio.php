@@ -112,15 +112,15 @@ final class TranscribeAnswerAudio extends TenantAwareJob
 
         $completed = $metrics->withWordCount($result->wordCount());
 
-        $breakdown = is_array($answer->breakdown) ? $answer->breakdown : [];
-        $breakdown['audio'] = $completed->toArray();
-        $breakdown['asr_confidence'] = $result->confidence;
-        $breakdown['asr_model'] = $result->modelKey;
+        $meta = is_array($answer->transcript_meta) ? $answer->transcript_meta : [];
+        $meta['audio'] = $completed->toArray();
+        $meta['asr_confidence'] = $result->confidence;
+        $meta['asr_model'] = $result->modelKey;
+        $meta['asr_provider'] = $result->provider->value;
 
-        $answer->forceFill([
-            'transcript' => $result->text,
-            'breakdown' => $breakdown,
-        ])->save();
+        $answer->transcript = $result->text;
+        $answer->transcript_meta = $meta;
+        $answer->save();
 
         ScoreAnswerWithAi::dispatch($this->academyId, $this->answerId);
     }

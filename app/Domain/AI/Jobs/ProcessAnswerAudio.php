@@ -7,6 +7,7 @@ namespace App\Domain\AI\Jobs;
 use App\Domain\AI\Data\AudioMetrics;
 use App\Domain\AI\Exceptions\AudioQualityException;
 use App\Domain\AI\Support\AudioAnalyzer;
+use App\Domain\Assessment\Enums\ScoringStatus;
 use App\Domain\Assessment\Models\Answer;
 use App\Domain\Shared\Jobs\TenantAwareJob;
 use Illuminate\Support\Facades\Log;
@@ -143,19 +144,24 @@ final class ProcessAnswerAudio extends TenantAwareJob
 
     private function storeMetrics(Answer $answer, AudioMetrics $metrics, bool $noisy): void
     {
-        $breakdown = is_array($answer->breakdown) ? $answer->breakdown : [];
-        $breakdown['audio'] = $metrics->toArray();
-        $breakdown['audio_noisy'] = $noisy;
+        $meta = is_array($answer->transcript_meta) ? $answer->transcript_meta : [];
+        $meta['audio'] = $metrics->toArray();
+        $meta['audio_noisy'] = $noisy;
 
-        $answer->forceFill(['breakdown' => $breakdown])->save();
+        $answer->transcript_meta = $meta;
+        $answer->save();
     }
 
+    /**
+     * Unusable audio is a final state, not a review queue item: there is nothing
+     * for a teacher to grade. The student gets a plain-language reason and can
+     * simply record again.
+     */
     private function rejectAudio(Answer $answer, AudioQualityException $e): void
     {
-        $answer->forceFill([
-            'scoring_status' => 'rejected',
-            'feedback' => ['summary' => $e->studentMessage(), 'reason' => $e->reason],
-        ])->save();
+        $answer->scoring_status = ScoringStatus::Failed;
+        $answer->feedback = ['summary' => $e->studentMessage(), 'reason' => $e->reason];
+        $answer->save();
 
         Log::info('Answer audio rejected before spending on AI', [
             'answer_id' => $this->answerId,

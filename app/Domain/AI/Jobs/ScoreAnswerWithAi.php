@@ -6,6 +6,7 @@ namespace App\Domain\AI\Jobs;
 
 use App\Domain\AI\Events\AnswerScoringFailed;
 use App\Domain\AI\Services\AiGateway;
+use App\Domain\Assessment\Enums\ScoringStatus;
 use App\Domain\Assessment\Models\Answer;
 use App\Domain\Shared\Jobs\TenantAwareJob;
 use Illuminate\Support\Facades\Log;
@@ -50,9 +51,12 @@ final class ScoreAnswerWithAi extends TenantAwareJob
         }
 
         // Re-queued work must not overwrite a score a teacher has since fixed.
-        if (in_array((string) $answer->scoring_status, [AiGateway::STATUS_SCORED, 'overridden'], true)) {
+        if ($answer->scoring_status === ScoringStatus::Scored || $answer->graded_manually) {
             return;
         }
+
+        $answer->scoring_status = ScoringStatus::Scoring;
+        $answer->save();
 
         $gateway->scoreAnswer($answer);
     }
@@ -68,7 +72,8 @@ final class ScoreAnswerWithAi extends TenantAwareJob
         $answer = Answer::query()->find($this->answerId);
 
         if ($answer !== null) {
-            $answer->forceFill(['scoring_status' => AiGateway::STATUS_MANUAL_REVIEW])->save();
+            $answer->scoring_status = ScoringStatus::ManualReview;
+            $answer->save();
         }
 
         AnswerScoringFailed::dispatch(

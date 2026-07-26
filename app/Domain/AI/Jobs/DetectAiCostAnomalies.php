@@ -6,6 +6,7 @@ namespace App\Domain\AI\Jobs;
 
 use App\Domain\AI\Events\AiCostAnomalyDetected;
 use App\Domain\AI\Models\AiRequest;
+use DateTimeInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -80,7 +81,7 @@ final class DetectAiCostAnomalies implements ShouldQueue
     /**
      * @return array<int, float>
      */
-    private function spendByAcademy(\DateTimeInterface $from, \DateTimeInterface $to): array
+    private function spendByAcademy(DateTimeInterface $from, DateTimeInterface $to): array
     {
         return AiRequest::query()
             ->withoutGlobalScope('academy')

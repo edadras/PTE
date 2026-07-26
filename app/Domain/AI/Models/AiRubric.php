@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * @property int $id
- * @property int|null $academy_id  null = platform default
+ * @property int|null $academy_id null = platform default
  * @property AiTaskKey $task_key
  * @property string $name
  * @property int $version
@@ -58,7 +58,7 @@ final class AiRubric extends Model
     {
         // A rubric whose weights do not sum to 100 is quietly wrong for every
         // student it touches, so it must not reach the database at all.
-        static::saving(function (self $rubric): void {
+        self::saving(function (self $rubric): void {
             $rubric->assertValid();
         });
     }
