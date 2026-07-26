@@ -15,6 +15,8 @@ use App\Domain\Commerce\Events\RenewalReminderDue;
 use App\Domain\Commerce\Events\SubscriptionStatusChanged;
 use App\Domain\Integration\Enums\WebhookEvent;
 use App\Domain\Integration\Services\WebhookEmitter;
+use App\Domain\Support\Events\TicketOpened;
+use BackedEnum;
 use Illuminate\Events\Dispatcher;
 
 /**
@@ -35,6 +37,7 @@ final class EmitDomainWebhooks
         $events->listen(PaymentRecorded::class, [self::class, 'onPaymentRecorded']);
         $events->listen(SubscriptionStatusChanged::class, [self::class, 'onSubscriptionStatusChanged']);
         $events->listen(RenewalReminderDue::class, [self::class, 'onRenewalReminderDue']);
+        $events->listen(TicketOpened::class, [self::class, 'onTicketOpened']);
     }
 
     public function onPracticeCompleted(PracticeSessionCompleted $event): void
@@ -44,10 +47,10 @@ final class EmitDomainWebhooks
         $this->emitter->emit(WebhookEvent::PracticeCompleted, [
             'session_id' => (int) $session->getKey(),
             'student_id' => (int) $session->student_id,
-            'module' => $session->module_key instanceof \BackedEnum
+            'module' => $session->module_key instanceof BackedEnum
                 ? $session->module_key->value
                 : $session->module_key,
-            'status' => $session->status instanceof \BackedEnum ? $session->status->value : $session->status,
+            'status' => $session->status instanceof BackedEnum ? $session->status->value : $session->status,
             'total_questions' => (int) $session->total_questions,
             'answered' => (int) $session->answered,
             'completed_at' => $session->completed_at?->toIso8601String(),
@@ -75,7 +78,7 @@ final class EmitDomainWebhooks
 
         $payload = [
             'score_id' => (int) $score->getKey(),
-            'session_type' => $score->session_type instanceof \BackedEnum
+            'session_type' => $score->session_type instanceof BackedEnum
                 ? $score->session_type->value
                 : $score->session_type,
             'session_id' => (int) $score->session_id,
@@ -110,8 +113,8 @@ final class EmitDomainWebhooks
             'payment_id' => (int) $payment->getKey(),
             'amount' => (int) $payment->amount,
             'currency' => $payment->currency,
-            'status' => $payment->status instanceof \BackedEnum ? $payment->status->value : $payment->status,
-            'gateway' => $payment->gateway instanceof \BackedEnum ? $payment->gateway->value : $payment->gateway,
+            'status' => $payment->status instanceof BackedEnum ? $payment->status->value : $payment->status,
+            'gateway' => $payment->gateway instanceof BackedEnum ? $payment->gateway->value : $payment->gateway,
             'paid_at' => $payment->paid_at?->toIso8601String(),
         ], (int) $payment->academy_id);
     }
@@ -127,6 +130,19 @@ final class EmitDomainWebhooks
             'from' => $event->from->value,
             'to' => $event->to->value,
         ], (int) $event->subscription->academy_id);
+    }
+
+    public function onTicketOpened(TicketOpened $event): void
+    {
+        $ticket = $event->ticket;
+
+        $this->emitter->emit(WebhookEvent::SupportTicketCreated, [
+            'ticket_id' => (int) $ticket->getKey(),
+            'student_id' => $ticket->student_id === null ? null : (int) $ticket->student_id,
+            'subject' => $ticket->subject,
+            'priority' => $ticket->priority->value,
+            'source' => $ticket->source->value,
+        ], (int) $ticket->academy_id);
     }
 
     public function onRenewalReminderDue(RenewalReminderDue $event): void

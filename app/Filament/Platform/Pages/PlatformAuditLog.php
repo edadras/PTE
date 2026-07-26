@@ -8,6 +8,7 @@ use App\Filament\Support\PlatformAudit;
 use Filament\Pages\Page;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Livewire\WithPagination;
 
 /**
  * Viewer for `platform_audit_logs` (docs/02 §7).
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\DB;
  */
 final class PlatformAuditLog extends Page
 {
+    use WithPagination;
+
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
 
     protected static ?int $navigationSort = 90;

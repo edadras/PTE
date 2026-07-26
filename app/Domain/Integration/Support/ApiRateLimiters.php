@@ -23,16 +23,14 @@ use Illuminate\Support\Facades\RateLimiter;
  */
 final class ApiRateLimiters
 {
-    private static bool $registered = false;
-
-    public static function register(bool $force = false): void
+    /**
+     * Deliberately not latched: the RateLimiter is a per-application singleton
+     * and a test suite builds a new application per test, so a static "already
+     * done" flag would leave every request after the first one throttled to
+     * zero attempts. Re-registering is a handful of closures.
+     */
+    public static function register(): void
     {
-        if (self::$registered && ! $force) {
-            return;
-        }
-
-        self::$registered = true;
-
         // Academy API — 600/min per API key (docs/08 §4). Falls back to the
         // authenticated user, then the IP, so the platform tier is covered too.
         RateLimiter::for('api', static function (Request $request): Limit {

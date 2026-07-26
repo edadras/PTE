@@ -19,7 +19,7 @@ final class PermissionOptions
     /**
      * Grouped, label-resolved options an actor is allowed to grant.
      *
-     * @return array<string, array<string, string>> group label => [permission => label]
+     * @return array<string, array<string, string>> group key => [permission => label]
      */
     public static function grantableGroups(?User $actor): array
     {
@@ -37,11 +37,45 @@ final class PermissionOptions
             }
 
             if ($options !== []) {
-                $groups[PermissionCatalog::groupLabel((string) $group)] = $options;
+                $groups[(string) $group] = $options;
             }
         }
 
         return $groups;
+    }
+
+    /**
+     * Split a flat permission list into the per-group buckets the form uses.
+     *
+     * @param  array<int, string>  $permissions
+     * @return array<string, array<int, string>>
+     */
+    public static function toGroupedState(?User $actor, array $permissions): array
+    {
+        $state = [];
+
+        foreach (self::grantableGroups($actor) as $group => $options) {
+            $state[$group] = array_values(array_intersect($permissions, array_keys($options)));
+        }
+
+        return $state;
+    }
+
+    /**
+     * @param  array<string, array<int, string>|null>  $grouped
+     * @return array<int, string>
+     */
+    public static function fromGroupedState(?User $actor, array $grouped): array
+    {
+        $flat = [];
+
+        foreach ($grouped as $permissions) {
+            foreach ((array) $permissions as $permission) {
+                $flat[] = (string) $permission;
+            }
+        }
+
+        return self::sanitise($actor, array_values(array_unique($flat)));
     }
 
     /**

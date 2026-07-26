@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Domain\Integration\Support\ApiBootstrap;
 use App\Domain\Integration\Support\ApiExceptionMapper;
 use Closure;
 use Illuminate\Http\Request;
@@ -19,13 +20,17 @@ use Throwable;
  *     envelope rather than an HTML error page;
  *  2. mint the `X-Request-Id` that every response — success or failure —
  *     carries, and that the error envelope echoes back (docs/08 §4);
- *  3. convert any throwable escaping the inner pipeline into that envelope, via
- *     ApiExceptionMapper.
+ *  3. make sure ApiExceptionMapper is what turns a throwable into that
+ *     envelope.
  *
- * Point 3 lives here rather than in `bootstrap/app.php` only so that this layer
- * owns its own contract; the same mapper should also be registered as a global
- * renderer so exceptions raised *outside* the route pipeline (routing misses,
- * middleware priority faults) get the same shape.
+ * Point 3 needs a word of explanation. `Illuminate\Routing\Pipeline` catches
+ * exceptions *inside* the middleware stack and renders them through the
+ * exception handler, so a `try`/`catch` around `$next()` never sees a
+ * controller exception — by the time control returns here it is already a
+ * response. The mapper is therefore attached to the handler as a renderable
+ * callback. Registering it in `bootstrap/app.php` instead is strictly better
+ * and this call becomes a no-op the moment that happens; the local `catch` is
+ * kept for throwables raised before routing hands over to the pipeline.
  */
 final class ForceJsonResponse
 {
@@ -35,6 +40,9 @@ final class ForceJsonResponse
 
     public function handle(Request $request, Closure $next): Response
     {
+        // Idempotent, and a no-op once the renderer is wired in bootstrap/app.php.
+        ApiBootstrap::registerExceptionRenderer();
+
         $request->headers->set('Accept', 'application/json');
 
         $requestId = $this->requestId($request);
@@ -57,7 +65,7 @@ final class ForceJsonResponse
 
     /**
      * A caller-supplied id is honoured so a mobile crash report and our logs can
-     * be joined, but it is length-capped and stripped: it ends up in log files.
+     * be joined, but it is stripped and length-capped: it ends up in log files.
      */
     private function requestId(Request $request): string
     {

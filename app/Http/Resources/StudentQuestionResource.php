@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Domain\Learning\Models\Question;
+use BackedEnum;
 use Illuminate\Http\Request;
 
 /**
@@ -37,7 +38,7 @@ final class StudentQuestionResource extends ApiResource
                 ->all()),
             'media' => $this->whenLoaded('media', fn (): array => $this->media
                 ->map(static fn (object $media): array => [
-                    'kind' => $media->kind instanceof \BackedEnum ? $media->kind->value : $media->kind,
+                    'kind' => $media->kind instanceof BackedEnum ? $media->kind->value : $media->kind,
                     'duration_ms' => $media->duration_ms,
                 ])
                 ->all()),

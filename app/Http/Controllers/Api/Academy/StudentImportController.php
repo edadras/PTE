@@ -9,6 +9,7 @@ use App\Domain\Identity\Data\CreateStudentData;
 use App\Http\Controllers\Api\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Throwable;
 
 /**
  * `POST /api/v1/students/import` — docs/08 §3.
@@ -42,7 +43,7 @@ final class StudentImportController extends ApiController
             try {
                 $student = $action->handle(CreateStudentData::fromArray($row));
                 $created[] = (int) $student->getKey();
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $failed[] = ['row' => (int) $index, 'message' => $e->getMessage()];
             }
         }

@@ -19,6 +19,11 @@ final class AcademyResource extends ApiResource
      */
     public function toArray(Request $request): array
     {
+        // preferredLocale() reads two relations as properties, which
+        // Model::shouldBeStrict() forbids lazily. Loading them explicitly is
+        // allowed and is a no-op when the controller already eager-loaded.
+        $this->resource->loadMissing(['settings', 'brand']);
+
         return [
             'id' => (int) $this->getKey(),
             'slug' => $this->slug,
