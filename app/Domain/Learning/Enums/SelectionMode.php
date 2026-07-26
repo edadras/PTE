@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Learning\Enums;
 
+use BackedEnum;
+
 /**
  * How the practice engine picks the next questions.
  *
@@ -20,12 +22,20 @@ enum SelectionMode: string
         return __('learning.selection_mode.'.$this->value);
     }
 
-    public static function fromMixed(self|string|null $mode): self
+    /**
+     * Tolerates the equivalent enum from another context (Assessment passes its
+     * own PracticeSelection through) as well as a plain string.
+     */
+    public static function fromMixed(BackedEnum|string|null $mode): self
     {
         if ($mode instanceof self) {
             return $mode;
         }
 
-        return self::tryFrom((string) $mode) ?? self::Random;
+        if ($mode instanceof BackedEnum) {
+            $mode = $mode->value;
+        }
+
+        return is_string($mode) ? (self::tryFrom($mode) ?? self::Random) : self::Random;
     }
 }

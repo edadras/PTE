@@ -10,6 +10,7 @@ use Database\Factories\QuestionMediaFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -23,7 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $transcript
  * @property string|null $telegram_file_id
  * @property int|null $telegram_bot_id
- * @property \Illuminate\Support\Carbon|null $cached_at
+ * @property Carbon|null $cached_at
  */
 final class QuestionMedia extends Model
 {

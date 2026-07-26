@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -38,8 +39,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property float|null $avg_score
  * @property int|null $created_by
  * @property int|null $approved_by
- * @property \Illuminate\Support\Carbon|null $approved_at
- * @property \Illuminate\Support\Carbon|null $published_at
+ * @property Carbon|null $approved_at
+ * @property Carbon|null $published_at
  * @property string|null $import_batch_id
  */
 final class Question extends Model
