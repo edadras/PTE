@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Scoring;
 
+use App\Domain\Assessment\Models\Answer;
 use App\Domain\Assessment\Scoring\Scorers\HighlightIncorrectWordsScorer;
 use App\Domain\Learning\Enums\QuestionType;
 
@@ -68,7 +69,7 @@ final class HighlightIncorrectWordsScorerTest extends ScorerTestCase
     /**
      * @param  array<int, string>  $selected
      */
-    private function hiw(array $selected): \App\Domain\Assessment\Models\Answer
+    private function hiw(array $selected): Answer
     {
         return $this->answer(
             QuestionType::HighlightIncorrectWords,

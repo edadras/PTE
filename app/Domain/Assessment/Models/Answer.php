@@ -19,6 +19,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
+use RuntimeException;
 
 /**
  * One submitted question, in either a practice or an exam session.
@@ -41,7 +43,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float|null $confidence
  * @property ScoringStatus $scoring_status
  * @property ScoredBy|null $scored_by
- * @property \Illuminate\Support\Carbon|null $scored_at
+ * @property Carbon|null $scored_at
  * @property bool $graded_manually
  * @property float|null $original_ai_score
  * @property string|null $override_reason
@@ -51,6 +53,7 @@ final class Answer extends Model
 {
     /** @use HasFactory<AnswerFactory> */
     use BelongsToAcademy;
+
     use HasFactory;
 
     protected $guarded = ['id'];
@@ -63,12 +66,6 @@ final class Answer extends Model
      * scorer can be unit-tested without touching the database.
      */
     private ?QuestionContext $context = null;
-
-    /** Models live outside App\\Models, so the factory is named explicitly. */
-    protected static function newFactory(): AnswerFactory
-    {
-        return AnswerFactory::new();
-    }
 
     protected function casts(): array
     {
@@ -144,7 +141,7 @@ final class Answer extends Model
         $question = $this->relationLoaded('question') ? $this->getRelation('question') : $this->question;
 
         if (! $question instanceof Model) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 "Answer {$this->getKey()} has no question context to score against."
             );
         }

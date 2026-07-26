@@ -13,7 +13,6 @@ use App\Domain\Commerce\Jobs\SuspendPastDueAcademies;
 use App\Domain\Learning\Jobs\RecalculateDifficultyIndex;
 use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Telegram\Jobs\CheckBotHealth;
-use App\Domain\Telegram\Models\TelegramBot;
 use Illuminate\Support\Facades\Schedule;
 
 /*
@@ -44,12 +43,10 @@ $forEachActiveAcademy = static function (callable $dispatch): void {
 // Webhooks drift: Telegram silently stops delivering after repeated 5xx, and a
 // bot that has quietly stopped answering is the single loudest customer
 // complaint. Five minutes is the shortest interval that stays cheap.
-Schedule::call(function (): void {
-    TelegramBot::query()
-        ->withoutGlobalScopes()
-        ->where('is_active', true)
-        ->eachById(fn (TelegramBot $bot) => CheckBotHealth::dispatch($bot->academy_id, $bot->getKey()), 100);
-})->everyFiveMinutes()->name('telegram:health')->withoutOverlapping();
+Schedule::call(static fn (): int => CheckBotHealth::dispatchForAllActiveBots())
+    ->everyFiveMinutes()
+    ->name('telegram:health')
+    ->withoutOverlapping();
 
 // --- Assessment -----------------------------------------------------------
 

@@ -33,11 +33,8 @@ final class CostMeter
 
     public const METRIC_TOKENS = 'ai_tokens';
 
-    /**
-     * Quota counters are integers, so cost is metered in millionths of a dollar
-     * rather than rounded to whole dollars and lost.
-     */
-    public const METRIC_COST_MICRO_USD = 'ai_cost_micro_usd';
+    /** Commerce meters this metric in whole US cents (UsageMetric::unit()). */
+    public const METRIC_COST_USD = 'ai_cost_usd';
 
     public const METRIC_ASR_MINUTES = 'asr_minutes';
 
@@ -148,13 +145,13 @@ final class CostMeter
      */
     public function hasQuota(int $academyId, string $metric = self::METRIC_REQUESTS, int $amount = 1): bool
     {
-        if (! class_exists(QuotaGuard::class)) {
+        $guard = $this->guard($academyId);
+
+        if ($guard === null) {
             return true;
         }
 
         try {
-            /** @var object $guard */
-            $guard = app(QuotaGuard::class);
             $result = $guard->check($metric, $amount);
 
             return ! method_exists($result, 'allowed') || $result->allowed();
@@ -202,7 +199,7 @@ final class CostMeter
         $increments = array_filter([
             self::METRIC_REQUESTS => 1,
             self::METRIC_TOKENS => $tokens,
-            self::METRIC_COST_MICRO_USD => (int) round($costUsd * 1_000_000),
+            self::METRIC_COST_USD => $this->centsWithCarry($academyId, $costUsd),
             self::METRIC_ASR_MINUTES => (int) ceil($audioMinutes),
         ], static fn (int $amount): bool => $amount > 0);
 
@@ -211,14 +208,34 @@ final class CostMeter
         }
     }
 
+    /**
+     * Commerce counts cost in whole cents, but a Flash call costs a fraction of
+     * one. Rounding each call would either inflate the meter by 100x or lose
+     * the spend entirely, so the sub-cent remainder is carried forward and only
+     * whole cents are reported.
+     */
+    private function centsWithCarry(int $academyId, float $costUsd): int
+    {
+        if ($costUsd <= 0.0) {
+            return 0;
+        }
+
+        $key = TenantKey::for($academyId, 'ai:cost-carry', now()->format('Y-m'));
+        $pending = (float) Cache::get($key, 0.0) + ($costUsd * 100);
+        $cents = (int) floor($pending);
+
+        Cache::put($key, round($pending - $cents, 6), 40 * 86400);
+
+        return $cents;
+    }
+
     private function increment(int $academyId, string $metric, int $amount): void
     {
-        if (class_exists(QuotaGuard::class)) {
-            try {
-                /** @var object $guard */
-                $guard = app(QuotaGuard::class);
+        $guard = $this->guard($academyId);
 
-                foreach (['increment', 'consume', 'record'] as $method) {
+        if ($guard !== null) {
+            try {
+                foreach (['consume', 'increment', 'record'] as $method) {
                     if (method_exists($guard, $method)) {
                         $guard->{$method}($metric, $amount);
 
@@ -226,8 +243,6 @@ final class CostMeter
                     }
                 }
 
-                // check() is the only guaranteed member of the contract; on the
-                // reserve-then-spend model it is also what advances the counter.
                 $guard->check($metric, $amount);
 
                 return;
@@ -240,6 +255,25 @@ final class CostMeter
 
         if (! Cache::add($key, $amount, 40 * 86400)) {
             Cache::increment($key, $amount);
+        }
+    }
+
+    /**
+     * QuotaGuard belongs to the Commerce context and is resolved at runtime, so
+     * the AI layer keeps working in a deployment where billing is not installed.
+     */
+    private function guard(int $academyId): ?object
+    {
+        if (! class_exists(QuotaGuard::class)) {
+            return null;
+        }
+
+        try {
+            return method_exists(QuotaGuard::class, 'forAcademy')
+                ? QuotaGuard::forAcademy($academyId)
+                : app(QuotaGuard::class);
+        } catch (\Throwable) {
+            return null;
         }
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Scoring;
 
+use App\Domain\Assessment\Models\Answer;
 use App\Domain\Assessment\Scoring\Scorers\WriteFromDictationScorer;
 use App\Domain\Learning\Enums\QuestionType;
 
@@ -71,7 +72,7 @@ final class WriteFromDictationScorerTest extends ScorerTestCase
         $this->assertSame(0.0, $result->confidence);
     }
 
-    private function wfd(string $submitted): \App\Domain\Assessment\Models\Answer
+    private function wfd(string $submitted): Answer
     {
         return $this->answer(
             QuestionType::WriteFromDictation,

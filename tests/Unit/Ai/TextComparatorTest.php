@@ -66,20 +66,24 @@ final class TextComparatorTest extends TestCase
         $this->assertSame(0.0, $this->comparator->wordErrorRate('', ''));
     }
 
-    public function test_it_reports_missing_and_extra_words(): void
+    public function test_it_reports_words_the_candidate_skipped(): void
     {
-        $reference = 'renewable energy sources are becoming increasingly affordable';
-        $hypothesis = 'renewable energy are becoming affordable and cheap';
-
-        $this->assertSame(
-            ['sources', 'increasingly'],
-            $this->comparator->missingWords($reference, $hypothesis),
+        $missing = $this->comparator->missingWords(
+            'renewable energy sources are becoming increasingly affordable',
+            'renewable energy are becoming affordable',
         );
 
-        $this->assertSame(
-            ['and', 'cheap'],
-            $this->comparator->extraWords($reference, $hypothesis),
+        $this->assertSame(['sources', 'increasingly'], $missing);
+    }
+
+    public function test_it_reports_words_the_candidate_added(): void
+    {
+        $extra = $this->comparator->extraWords(
+            'solar power is cheap',
+            'solar power is cheap and clean',
         );
+
+        $this->assertSame(['and', 'clean'], $extra);
     }
 
     public function test_contractions_survive_tokenisation(): void

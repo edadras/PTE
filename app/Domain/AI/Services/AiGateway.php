@@ -30,11 +30,6 @@ use RuntimeException;
  */
 final class AiGateway
 {
-    /** Written to Answer::scoring_status; the Assessment context reads these. */
-    public const STATUS_SCORED = 'scored';
-
-    public const STATUS_MANUAL_REVIEW = 'manual_review';
-
     public function __construct(
         private readonly ProviderResolver $resolver,
         private readonly PromptRenderer $renderer,
@@ -145,19 +140,36 @@ final class AiGateway
 
         $confidence = $response->confidence();
         $threshold = (float) config('pte.ai.low_confidence_threshold', 0.6);
+
+        // Three separate reasons to distrust a score, all ending the same way: a
+        // teacher looks at it before the student treats it as the truth.
         $needsReview = $confidence === null
             || $confidence < $threshold
             || $breakdown === null
             || ! $breakdown->isComplete();
 
-        $answer->forceFill([
-            'score' => $breakdown?->scaledScore,
-            'breakdown' => $this->mergeBreakdown($answer, $breakdown, $response),
-            'feedback' => $response->feedback(),
-            'confidence' => $confidence,
-            'ai_request_id' => $response->aiRequestId,
-            'scoring_status' => $needsReview ? self::STATUS_MANUAL_REVIEW : self::STATUS_SCORED,
-        ])->save();
+        $maxScore = $breakdown !== null
+            ? (float) $breakdown->scaleMax
+            : $answer->effectiveMaxScore();
+
+        $answer->applyScore(
+            new ScoreResult(
+                score: $breakdown?->scaledScore ?? 0.0,
+                maxScore: $maxScore,
+                breakdown: $this->mergeBreakdown($answer, $breakdown, $response),
+                feedback: $response->feedback(),
+                confidence: $confidence ?? 0.0,
+            ),
+            ScoredBy::Ai,
+        );
+
+        $answer->ai_request_id = $response->aiRequestId;
+
+        if ($needsReview) {
+            $answer->scoring_status = ScoringStatus::ManualReview;
+        }
+
+        $answer->save();
     }
 
     /**
@@ -169,8 +181,8 @@ final class AiGateway
      */
     public function variablesFor(Answer $answer, AiTaskKey $task, ?AiRubric $rubric = null): array
     {
-        $question = $answer->question;
-        $targetText = $this->questionText($question);
+        $context = $answer->context();
+        $targetText = $this->questionText($context);
         $transcript = (string) ($answer->transcript ?? '');
 
         $variables = [

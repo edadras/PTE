@@ -32,6 +32,7 @@ final class Exam extends Model
 {
     /** @use HasFactory<ExamFactory> */
     use BelongsToAcademy;
+
     use HasFactory;
     use SoftDeletes;
 
@@ -47,12 +48,6 @@ final class Exam extends Model
         'instant_result' => false,
         'require_teacher_approval' => true,
     ];
-
-    /** Models live outside App\\Models, so the factory is named explicitly. */
-    protected static function newFactory(): ExamFactory
-    {
-        return ExamFactory::new();
-    }
 
     protected function casts(): array
     {

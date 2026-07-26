@@ -13,6 +13,7 @@ use App\Domain\Assessment\Models\PracticeSession;
 use App\Domain\Assessment\Models\Score;
 use App\Domain\Learning\Enums\QuestionType;
 use Illuminate\Support\Collection;
+use Throwable;
 
 /**
  * Turns a session's answers into the one summary row everything else reads.
@@ -69,6 +70,7 @@ final class ScoreAggregator
 
     private function aggregateExam(ExamSession $session): Score
     {
+        $wasExpired = $session->status === SessionStatus::Expired;
         $answers = $this->answers($session);
         $totals = $this->totals($answers);
 
@@ -89,6 +91,10 @@ final class ScoreAggregator
 
         $requiresApproval = (bool) data_get($session->snapshot ?? [], 'exam.rules.require_teacher_approval', false);
 
+        // Scoring overwrites the Expired status, so the fact that the clock —
+        // not the student — ended the attempt is preserved here instead.
+        $autoSubmitted = $wasExpired;
+
         $score = $this->writeScore(
             $session,
             SessionType::Exam,
@@ -101,6 +107,7 @@ final class ScoreAggregator
                 'pending' => $this->pendingCount($answers),
                 'passing_score' => $passing,
                 'passed' => $session->passed,
+                'auto_submitted' => $autoSubmitted,
             ],
             null,
             // Academies that gate grades behind a teacher get an unpublished row;
@@ -257,7 +264,7 @@ final class ScoreAggregator
 
         try {
             return $answer->questionType();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // A deleted question must not break a report card.
             return null;
         }

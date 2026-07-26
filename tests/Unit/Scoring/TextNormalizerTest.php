@@ -15,7 +15,7 @@ final class TextNormalizerTest extends TestCase
 
         $this->assertSame(
             'the library will be closed on monday',
-            $normalizer->normalize("  The library,  will be  closed — on Monday!  ")
+            $normalizer->normalize('  The library,  will be  closed — on Monday!  ')
         );
     }
 

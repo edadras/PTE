@@ -38,15 +38,10 @@ final class PracticeSession extends Model
 {
     /** @use HasFactory<PracticeSessionFactory> */
     use BelongsToAcademy;
+
     use HasFactory;
 
     protected $guarded = ['id'];
-
-    /** Models live outside App\\Models, so the factory is named explicitly. */
-    protected static function newFactory(): PracticeSessionFactory
-    {
-        return PracticeSessionFactory::new();
-    }
 
     protected function casts(): array
     {
