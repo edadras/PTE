@@ -1,0 +1,48 @@
+# Local development stack. Production topology lives in docs/10-infrastructure-and-ops.md.
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: pte
+      MYSQL_USER: pte
+      MYSQL_PASSWORD: pte
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports: ['3306:3306']
+    volumes: ['mysql-data:/var/lib/mysql']
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-uroot', '-proot']
+      interval: 5s
+      retries: 20
+
+  # Two Redis instances on purpose: the queue must run with noeviction so a
+  # memory spike can never silently drop a student's answer, while the cache
+  # is free to evict. See docs/10-infrastructure-and-ops.md §3.
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports: ['6379:6379']
+
+  redis-queue:
+    image: redis:7-alpine
+    command: redis-server --maxmemory-policy noeviction --appendonly yes
+    ports: ['6380:6379']
+    volumes: ['redis-queue-data:/data']
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: pte
+      MINIO_ROOT_PASSWORD: pte-secret
+    ports: ['9000:9000', '9001:9001']
+    volumes: ['minio-data:/data']
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ['1025:1025', '8025:8025']
+
+volumes:
+  mysql-data:
+  redis-queue-data:
+  minio-data:

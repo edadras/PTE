@@ -1,0 +1,21 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 6
+
+    paths:
+        - app
+        - database/factories
+        - database/seeders
+
+    excludePaths:
+        - app/Filament/**/Pages/**
+
+    ignoreErrors:
+        # Eloquent's dynamic properties and relation magic
+        - '#Access to an undefined property Illuminate\\Database\\Eloquent\\Model::#'
+        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder#'
+
+    checkModelProperties: false
+    reportUnmatchedIgnoredErrors: false
