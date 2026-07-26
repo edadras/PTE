@@ -15,6 +15,10 @@ use App\Domain\AI\Exceptions\ProviderUnavailableException;
 use App\Domain\AI\Exceptions\QuotaExceededException;
 use App\Domain\AI\Models\AiRubric;
 use App\Domain\AI\Support\TextComparator;
+use App\Domain\Assessment\Data\QuestionContext;
+use App\Domain\Assessment\Data\ScoreResult;
+use App\Domain\Assessment\Enums\ScoredBy;
+use App\Domain\Assessment\Enums\ScoringStatus;
 use App\Domain\Assessment\Models\Answer;
 use App\Domain\Learning\Enums\QuestionType;
 use App\Domain\Tenancy\TenantContext;
@@ -198,8 +202,19 @@ final class AiGateway
             $variables['scale_max'] = $rubric->scale_max;
         }
 
+        foreach (['min_words', 'max_words'] as $rule) {
+            $value = $context->content($rule);
+
+            if ($value !== null) {
+                $variables[$rule] = $value;
+            }
+        }
+
         if ($task->usesAudioMetrics()) {
-            $metrics = AudioMetrics::fromArray((array) data_get($answer, 'breakdown.audio', []));
+            $meta = is_array($answer->transcript_meta) ? $answer->transcript_meta : [];
+            $metrics = AudioMetrics::fromArray(
+                is_array($meta['audio'] ?? null) ? $meta['audio'] : (array) data_get($answer->breakdown, 'audio', [])
+            );
 
             $variables += [
                 'transcript' => $transcript,
@@ -207,10 +222,10 @@ final class AiGateway
                 'pause_count' => $metrics->pauseCount,
                 'pause_total_ms' => $metrics->pauseTotalMs,
                 'speech_ratio' => $metrics->speechRatio(),
-                'asr_confidence' => (float) data_get($answer, 'breakdown.asr_confidence', 0),
+                'asr_confidence' => (float) ($meta['asr_confidence'] ?? 0),
             ];
         } else {
-            $studentText = $transcript !== '' ? $transcript : (string) data_get($answer, 'content.text', '');
+            $studentText = $this->studentText($answer);
 
             $variables += [
                 'student_text' => $studentText,
@@ -235,17 +250,20 @@ final class AiGateway
         return $variables;
     }
 
+    /**
+     * Reads the question through the answer's context, so an exam is graded
+     * against the snapshot taken when the session started rather than against a
+     * question the academy may have edited since.
+     */
     public function taskFor(Answer $answer): ?AiTaskKey
     {
-        $type = data_get($answer, 'question.type');
-
-        if ($type instanceof QuestionType) {
-            return AiTaskKey::forQuestionType($type);
+        try {
+            $type = $answer->questionType();
+        } catch (RuntimeException) {
+            return null;
         }
 
-        $resolved = is_string($type) ? QuestionType::tryFrom($type) : null;
-
-        return $resolved instanceof QuestionType ? AiTaskKey::forQuestionType($resolved) : null;
+        return $type instanceof QuestionType ? AiTaskKey::forQuestionType($type) : null;
     }
 
     private function flagForManualReview(Answer $answer, AiTaskKey $task, string $reason): void
@@ -256,7 +274,8 @@ final class AiGateway
             'reason' => $reason,
         ]);
 
-        $answer->forceFill(['scoring_status' => self::STATUS_MANUAL_REVIEW])->save();
+        $answer->scoring_status = ScoringStatus::ManualReview;
+        $answer->save();
 
         AnswerScoringFailed::dispatch(
             $this->academyId($answer),
@@ -292,16 +311,40 @@ final class AiGateway
         return is_int($fromAnswer) ? $fromAnswer : TenantContext::id();
     }
 
-    private function questionText(mixed $question): string
+    /**
+     * The material the answer is judged against. Which content key holds it
+     * depends on the task: a Read Aloud has `text`, a Re-tell Lecture has the
+     * lecture `transcript`, an Essay has the `prompt`.
+     */
+    private function questionText(QuestionContext $context): string
     {
-        foreach (['content.text', 'text', 'prompt_text', 'body', 'content.prompt'] as $path) {
-            $value = data_get($question, $path);
+        foreach (['text', 'transcript', 'prompt', 'passage'] as $key) {
+            $value = $context->content($key);
 
             if (is_string($value) && trim($value) !== '') {
                 return $value;
             }
         }
 
-        return '';
+        // Describe Image has no text at all; the key points are what a grader
+        // can legitimately be told about the image.
+        $keyPoints = $context->content('key_points');
+
+        return is_array($keyPoints)
+            ? 'Key elements of the image: '.implode('; ', array_map(strval(...), $keyPoints))
+            : '';
+    }
+
+    private function studentText(Answer $answer): string
+    {
+        foreach (['text', 'answer', 'response'] as $key) {
+            $value = $answer->payloadValue($key);
+
+            if (is_string($value) && trim($value) !== '') {
+                return $value;
+            }
+        }
+
+        return (string) ($answer->transcript ?? '');
     }
 }
