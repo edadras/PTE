@@ -27,6 +27,8 @@ return [
         'idempotency_in_progress' => 'A request with this Idempotency-Key is still being processed.',
         'export_async_only' => 'Spreadsheet exports are produced asynchronously; request one from the panel.',
         'uploads_unavailable' => 'Direct uploads are not available on this deployment.',
+        'import_file_unreadable' => 'The uploaded import file could not be read.',
+        'import_header_invalid' => 'The import file must have a header row with a "first_name" column.',
     ],
 
     'auth' => [

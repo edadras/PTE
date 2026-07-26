@@ -5,22 +5,33 @@ declare(strict_types=1);
 namespace App\Domain\Audit;
 
 use App\Domain\Assessment\Events\AnswerScoreOverridden;
+use App\Domain\Assessment\Events\ExamDeleted;
 use App\Domain\Assessment\Events\ExamPublished;
+use App\Domain\Audit\Listeners\RecordAcademyLifecycle;
+use App\Domain\Audit\Listeners\RecordAiPublication;
 use App\Domain\Audit\Listeners\RecordBotConnection;
+use App\Domain\Audit\Listeners\RecordBotTokenRotation;
 use App\Domain\Audit\Listeners\RecordDataExport;
+use App\Domain\Audit\Listeners\RecordExamDeletion;
 use App\Domain\Audit\Listeners\RecordExamPublication;
 use App\Domain\Audit\Listeners\RecordPaymentActivity;
 use App\Domain\Audit\Listeners\RecordScoreOverride;
+use App\Domain\Audit\Listeners\RecordStaffChange;
+use App\Domain\Audit\Listeners\RecordStudentDeletion;
 use App\Domain\Audit\Listeners\RecordSubscriptionChange;
 use App\Domain\Audit\Listeners\RecordTicketActivity;
+use App\Domain\Audit\Listeners\RecordWebhookReset;
 use App\Domain\Audit\Services\AuditRecorder;
 use App\Domain\Commerce\Events\PaymentRecorded;
 use App\Domain\Commerce\Events\SubscriptionCanceled;
 use App\Domain\Commerce\Events\SubscriptionStatusChanged;
+use App\Domain\Identity\Events\StudentDeleted;
 use App\Domain\Notification\Contracts\SmsDriver;
 use App\Domain\Notification\Services\NullSmsDriver;
 use App\Domain\Reporting\Events\ReportExported;
 use App\Domain\Telegram\Events\BotConnected;
+use App\Domain\Telegram\Events\BotTokenRotated;
+use App\Domain\Telegram\Events\BotWebhookReset;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
@@ -66,9 +77,16 @@ final class OpsServiceProvider extends ServiceProvider
         Event::listen(SubscriptionCanceled::class, [RecordSubscriptionChange::class, 'handleCanceled']);
         Event::listen(PaymentRecorded::class, [RecordPaymentActivity::class, 'handle']);
         Event::listen(BotConnected::class, [RecordBotConnection::class, 'handle']);
+        Event::listen(BotTokenRotated::class, [RecordBotTokenRotation::class, 'handle']);
+        Event::listen(BotWebhookReset::class, [RecordWebhookReset::class, 'handle']);
         Event::listen(ExamPublished::class, [RecordExamPublication::class, 'handle']);
+        Event::listen(ExamDeleted::class, [RecordExamDeletion::class, 'handle']);
+        Event::listen(StudentDeleted::class, [RecordStudentDeletion::class, 'handle']);
         Event::listen(ReportExported::class, [RecordDataExport::class, 'handle']);
 
         Event::subscribe(RecordTicketActivity::class);
+        Event::subscribe(RecordStaffChange::class);
+        Event::subscribe(RecordAiPublication::class);
+        Event::subscribe(RecordAcademyLifecycle::class);
     }
 }

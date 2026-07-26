@@ -27,6 +27,8 @@ return [
         'idempotency_in_progress' => 'درخواستی با همین Idempotency-Key هنوز در حال پردازش است.',
         'export_async_only' => 'خروجی اکسل به‌صورت غیرهمزمان ساخته می‌شود؛ از پنل درخواست کنید.',
         'uploads_unavailable' => 'آپلود مستقیم در این محیط فعال نیست.',
+        'import_file_unreadable' => 'فایل ورودی قابل خواندن نبود.',
+        'import_header_invalid' => 'فایل ورودی باید ردیف سرستون با ستون «first_name» داشته باشد.',
     ],
 
     'auth' => [

@@ -6,6 +6,7 @@ namespace App\Domain\Commerce\Enums;
 
 use App\Domain\Commerce\Contracts\PaymentGateway;
 use App\Domain\Commerce\Gateways\IdPayGateway;
+use App\Domain\Commerce\Gateways\NextPayGateway;
 use App\Domain\Commerce\Gateways\StripeGateway;
 use App\Domain\Commerce\Gateways\TelegramPaymentsGateway;
 use App\Domain\Commerce\Gateways\ZarinPalGateway;
@@ -39,10 +40,10 @@ enum PaymentGatewayKey: string
         return match ($this) {
             self::ZarinPal => ZarinPalGateway::class,
             self::IdPay => IdPayGateway::class,
+            self::NextPay => NextPayGateway::class,
             self::Zibal => ZibalGateway::class,
             self::Stripe => StripeGateway::class,
             self::Telegram => TelegramPaymentsGateway::class,
-            self::NextPay => null,
         };
     }
 
@@ -71,9 +72,10 @@ enum PaymentGatewayKey: string
         return in_array($this, [self::Stripe, self::Telegram], true);
     }
 
+    /** NextPay refunds via its verify endpoint (`refund_request`), full amount only. */
     public function supportsRefund(): bool
     {
-        return in_array($this, [self::Stripe, self::Zibal, self::IdPay], true);
+        return in_array($this, [self::Stripe, self::Zibal, self::IdPay, self::NextPay], true);
     }
 
     /**

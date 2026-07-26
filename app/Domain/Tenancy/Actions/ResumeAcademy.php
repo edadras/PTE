@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Tenancy\Actions;
 
 use App\Domain\Tenancy\Enums\AcademyStatus;
+use App\Domain\Tenancy\Events\AcademyResumed;
 use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Tenancy\Services\BrandResolver;
 
@@ -34,6 +35,11 @@ final class ResumeAcademy
 
         $this->brandResolver->forget($academy);
 
-        return $academy->refresh();
+        $academy->refresh();
+
+        // Mandatory audit hook (docs/02 §7).
+        AcademyResumed::dispatch($academy);
+
+        return $academy;
     }
 }

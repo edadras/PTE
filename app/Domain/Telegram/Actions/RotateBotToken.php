@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Telegram\Actions;
 
 use App\Domain\Telegram\Data\BotIdentity;
+use App\Domain\Telegram\Events\BotTokenRotated;
 use App\Domain\Telegram\Exceptions\InvalidBotTokenException;
 use App\Domain\Telegram\Exceptions\TokenAlreadyInUseException;
 use App\Domain\Telegram\Jobs\RegisterWebhook;
@@ -38,6 +39,10 @@ final class RotateBotToken
         ResolveTenantFromBot::forgetCache($bot->public_id);
 
         RegisterWebhook::dispatch($bot->academy_id, (int) $bot->getKey(), false);
+
+        // Mandatory audit hook (docs/02 §7); the event carries the row, never
+        // the token.
+        BotTokenRotated::dispatch($bot);
 
         return $identity;
     }

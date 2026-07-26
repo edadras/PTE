@@ -8,6 +8,8 @@ use App\Domain\Identity\Actions\CreateStudent;
 use App\Domain\Identity\Data\CreateStudentData;
 use App\Domain\Identity\Enums\StudentStatus;
 use App\Domain\Identity\Models\Student;
+use App\Domain\Reporting\Actions\ExportReport;
+use App\Domain\Reporting\Enums\ReportType;
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Api\Academy\StoreStudentRequest;
 use App\Http\Requests\Api\Academy\UpdateStudentRequest;
@@ -26,8 +28,14 @@ use Illuminate\Http\Request;
  */
 final class StudentController extends ApiController
 {
-    public function index(Request $request): ApiCollection
+    public function index(Request $request, ExportReport $export): ApiCollection|JsonResponse
     {
+        $request->validate(['format' => ['nullable', 'in:json,xlsx']]);
+
+        if ($request->string('format')->toString() === 'xlsx') {
+            return $this->queueExport($request, $export);
+        }
+
         $students = Student::query()
             ->when(
                 $request->filled('status'),
@@ -87,5 +95,21 @@ final class StudentController extends ApiController
         $model->delete();
 
         return new JsonResponse(null, 204);
+    }
+
+    /** `?format=xlsx` — the roster as a report build, 202 + id to poll at `/exports/{id}`. */
+    private function queueExport(Request $request, ExportReport $export): JsonResponse
+    {
+        $params = array_filter([
+            'status' => $request->filled('status') ? $request->string('status')->toString() : null,
+        ], static fn (?string $value): bool => $value !== null);
+
+        $report = $export->queue(ReportType::Students, $params, format: 'xlsx');
+
+        return $this->payload($request, [
+            'report_id' => (int) $report->getKey(),
+            'status' => $report->status->value,
+            'format' => 'xlsx',
+        ], status: 202);
     }
 }

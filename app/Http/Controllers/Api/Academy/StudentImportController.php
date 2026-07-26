@@ -6,28 +6,36 @@ namespace App\Http\Controllers\Api\Academy;
 
 use App\Domain\Identity\Actions\CreateStudent;
 use App\Domain\Identity\Data\CreateStudentData;
+use App\Domain\Integration\Jobs\ImportStudentsJob;
+use App\Domain\Tenancy\TenantContext;
 use App\Http\Controllers\Api\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 /**
- * `POST /api/v1/students/import` — docs/08 §3.
+ * `POST /api/v1/students/import` — docs/08 §3 (CSV/Excel → job).
  *
- * The Identity context has no bulk-import job yet, so this endpoint takes an
- * inline JSON array rather than pretending a file upload is queued. A capped,
- * synchronous batch is honest about what happens; a fake 202 would not be.
- * When Identity grows an ImportStudents action this controller should hand the
- * uploaded file to it instead.
+ * A CSV upload is stored on the tenant disk and handed to a queued job, 202 +
+ * import id, mirroring the questions bulk-import endpoint. The inline JSON
+ * array is kept as a documented small-batch convenience: it is capped, runs
+ * synchronously and answers 201 with the ids, which an integration pushing a
+ * handful of enrolments genuinely wants.
+ *
+ * `GET /api/v1/students/import/{id}` polls the job's progress and, once done,
+ * the per-row error report.
  */
 final class StudentImportController extends ApiController
 {
-    private const MAX_ROWS = 500;
+    private const MAX_INLINE_ROWS = 500;
 
-    public function __invoke(Request $request, CreateStudent $action): JsonResponse
+    public function store(Request $request, CreateStudent $action): JsonResponse
     {
         $validated = $request->validate([
-            'students' => ['required', 'array', 'min:1', 'max:'.self::MAX_ROWS],
+            'file' => ['required_without:students', 'prohibits:students', 'file', 'mimes:csv,txt', 'max:10240'],
+            'students' => ['required_without:file', 'array', 'min:1', 'max:'.self::MAX_INLINE_ROWS],
             'students.*.first_name' => ['required', 'string', 'max:80'],
             'students.*.last_name' => ['nullable', 'string', 'max:80'],
             'students.*.email' => ['nullable', 'email', 'max:191'],
@@ -36,10 +44,48 @@ final class StudentImportController extends ApiController
             'students.*.student_code' => ['nullable', 'string', 'max:32'],
         ]);
 
+        if ($request->hasFile('file')) {
+            return $this->queueFile($request);
+        }
+
+        return $this->importInline($request, $validated['students'], $action);
+    }
+
+    public function show(Request $request, string $importId): JsonResponse
+    {
+        $status = ImportStudentsJob::statusFor(TenantContext::id(), $importId);
+
+        if ($status === null) {
+            throw new NotFoundHttpException(__('api.errors.not_found'));
+        }
+
+        return $this->payload($request, ['import_id' => $importId, ...$status]);
+    }
+
+    private function queueFile(Request $request): JsonResponse
+    {
+        $path = (string) $request->file('file')?->store('imports/students', 'tenant');
+        $importId = (string) Str::uuid();
+        $academyId = TenantContext::id();
+
+        ImportStudentsJob::markQueued($academyId, $importId);
+        ImportStudentsJob::dispatch($academyId, $path, $importId);
+
+        return $this->payload($request, [
+            'import_id' => $importId,
+            'status' => 'queued',
+        ], status: 202);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     */
+    private function importInline(Request $request, array $rows, CreateStudent $action): JsonResponse
+    {
         $created = [];
         $failed = [];
 
-        foreach ($validated['students'] as $index => $row) {
+        foreach ($rows as $index => $row) {
             try {
                 $student = $action->handle(CreateStudentData::fromArray($row));
                 $created[] = (int) $student->getKey();

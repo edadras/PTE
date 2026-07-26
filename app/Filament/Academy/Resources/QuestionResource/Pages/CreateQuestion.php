@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Academy\Resources\QuestionResource\Pages;
 
 use App\Domain\Learning\Actions\CreateQuestion as CreateQuestionAction;
+use App\Domain\Learning\Actions\SyncQuestionMedia;
 use App\Domain\Learning\Data\QuestionData;
 use App\Domain\Learning\Enums\QuestionStatus;
 use App\Domain\Learning\Enums\QuestionType;
@@ -34,10 +35,15 @@ final class CreateQuestion extends CreateRecord
         ];
 
         try {
-            return app(CreateQuestionAction::class)->handle(
+            $question = app(CreateQuestionAction::class)->handle(
                 QuestionData::fromArray($payload),
                 QuestionStatus::Draft,
             );
+
+            // Media rows are what the Telegram file_id cache keys on.
+            app(SyncQuestionMedia::class)->handle($question);
+
+            return $question;
         } catch (InvalidQuestionContentException $e) {
             Notification::make()
                 ->danger()

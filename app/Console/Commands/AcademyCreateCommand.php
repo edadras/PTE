@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Domain\Audit\Enums\AuditAction;
-use App\Domain\Audit\Services\AuditRecorder;
 use App\Domain\Commerce\Models\Plan;
 use App\Domain\Learning\Enums\ModuleKey;
 use App\Domain\Tenancy\Actions\CreateAcademy;
@@ -30,7 +28,7 @@ final class AcademyCreateCommand extends Command
 
     protected $description = 'Create a new academy with its owner, brand, settings and default subdomain.';
 
-    public function handle(CreateAcademy $createAcademy, AuditRecorder $audit): int
+    public function handle(CreateAcademy $createAcademy): int
     {
         $name = (string) $this->argument('name');
         $email = (string) $this->argument('owner-email');
@@ -63,12 +61,6 @@ final class AcademyCreateCommand extends Command
 
             return self::FAILURE;
         }
-
-        $audit->recordPlatform(AuditAction::AcademyCreated, $academy, [
-            'slug' => $academy->slug,
-            'owner_email' => $email,
-            'plan_id' => $plan,
-        ]);
 
         $this->components->info(__('reports.console.academy_created', [
             'name' => $academy->name,

@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Console\Commands\Concerns\ResolvesAcademy;
-use App\Domain\Audit\Enums\AuditAction;
-use App\Domain\Audit\Services\AuditRecorder;
 use App\Domain\Tenancy\Actions\ResumeAcademy;
 use Illuminate\Console\Command;
 
@@ -21,7 +19,7 @@ final class AcademyResumeCommand extends Command
 
     protected $description = 'Lift a suspension and put an academy back into service.';
 
-    public function handle(ResumeAcademy $resume, AuditRecorder $audit): int
+    public function handle(ResumeAcademy $resume): int
     {
         $academy = $this->requireAcademy($this->argument('id'));
 
@@ -29,13 +27,7 @@ final class AcademyResumeCommand extends Command
             return self::FAILURE;
         }
 
-        $previous = $academy->status->value;
         $academy = $resume->handle($academy);
-
-        $audit->recordPlatform(AuditAction::AcademyResumed, $academy, [
-            'from' => $previous,
-            'to' => $academy->status->value,
-        ]);
 
         $this->components->info(__('reports.console.academy_resumed', ['name' => $academy->name]));
 

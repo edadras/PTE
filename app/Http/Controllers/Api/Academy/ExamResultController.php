@@ -8,6 +8,8 @@ use App\Domain\Assessment\Enums\SessionType;
 use App\Domain\Assessment\Models\Exam;
 use App\Domain\Assessment\Models\ExamSession;
 use App\Domain\Assessment\Models\Score;
+use App\Domain\Reporting\Actions\ExportReport;
+use App\Domain\Reporting\Enums\ReportType;
 use App\Http\Controllers\Api\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,22 +17,30 @@ use Illuminate\Http\Request;
 /**
  * `GET /api/v1/exams/{id}/results?format=json|xlsx` — docs/08 §3.
  *
- * Only `json` is served inline. An xlsx of a whole cohort is a report build,
- * which belongs on the reports queue, not in a request/response cycle.
+ * `json` is served inline. A spreadsheet of a whole cohort is a report build,
+ * so `xlsx` registers a report on the reports queue and answers 202 with the
+ * id to poll at `GET /api/v1/exports/{id}` for the signed download link.
  */
 final class ExamResultController extends ApiController
 {
-    public function __invoke(Request $request, int $exam): JsonResponse
+    public function __invoke(Request $request, int $exam, ExportReport $export): JsonResponse
     {
         $model = Exam::query()->findOrFail($exam);
 
         $request->validate(['format' => ['nullable', 'in:json,xlsx']]);
 
         if ($request->string('format')->toString() === 'xlsx') {
+            $report = $export->queue(
+                ReportType::ExamResults,
+                ['exam_id' => (int) $model->getKey()],
+                format: 'xlsx',
+            );
+
             return $this->payload($request, [
-                'status' => 'unsupported',
-                'message' => __('api.errors.export_async_only'),
-            ], status: 501);
+                'report_id' => (int) $report->getKey(),
+                'status' => $report->status->value,
+                'format' => 'xlsx',
+            ], status: 202);
         }
 
         $sessionIds = ExamSession::query()

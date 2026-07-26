@@ -18,6 +18,10 @@ use Throwable;
  * On the low-priority `reports` queue with a long timeout (docs/10 §2): an
  * export of 50k answers must never sit in front of a student waiting for a
  * message to be delivered.
+ *
+ * The output format (csv or xlsx) is not job state on purpose — it is read
+ * from reports.format by ExportReport::generate(), so a report queued as XLSX
+ * before a deploy is still built as XLSX by the new worker.
  */
 final class GenerateReportJob extends TenantAwareJob
 {

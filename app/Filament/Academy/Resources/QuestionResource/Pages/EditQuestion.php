@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Academy\Resources\QuestionResource\Pages;
 
+use App\Domain\Learning\Actions\SyncQuestionMedia;
 use App\Domain\Learning\Actions\UpdateQuestion;
 use App\Domain\Learning\Exceptions\InvalidQuestionContentException;
 use App\Domain\Learning\Models\Question;
@@ -73,7 +74,12 @@ final class EditQuestion extends EditRecord
         }
 
         try {
-            return app(UpdateQuestion::class)->handle($record, $attributes);
+            $question = app(UpdateQuestion::class)->handle($record, $attributes);
+
+            // Media rows are what the Telegram file_id cache keys on.
+            app(SyncQuestionMedia::class)->handle($question);
+
+            return $question;
         } catch (InvalidQuestionContentException $e) {
             Notification::make()
                 ->danger()

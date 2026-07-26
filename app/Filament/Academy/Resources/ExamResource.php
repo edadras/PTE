@@ -9,6 +9,7 @@ use App\Domain\Assessment\Enums\ExamStatus;
 use App\Domain\Assessment\Enums\SelectionMode;
 use App\Domain\Assessment\Models\Exam;
 use App\Domain\Identity\Models\ClassGroup;
+use App\Domain\Identity\Models\Student;
 use App\Domain\Learning\Enums\Difficulty;
 use App\Domain\Learning\Enums\ModuleKey;
 use App\Domain\Learning\Enums\QuestionType;
@@ -132,6 +133,14 @@ final class ExamResource extends Resource
                         ->multiple()
                         ->options(fn (): array => ClassGroup::query()->orderBy('name')->pluck('name', 'id')->all())
                         ->visible(fn (Get $get): bool => $get('availability.audience') === 'class_groups'),
+                    Forms\Components\Select::make('availability.student_ids')
+                        ->label(__('panel.exams.field.students'))
+                        ->multiple()
+                        ->searchable()
+                        ->getSearchResultsUsing(fn (string $search): array => self::studentOptions($search))
+                        ->getOptionLabelsUsing(fn (array $values): array => self::studentLabels($values))
+                        ->helperText(__('panel.exams.help.students'))
+                        ->visible(fn (Get $get): bool => $get('availability.audience') === 'manual'),
                     Forms\Components\DateTimePicker::make('availability.opens_at')->label(__('panel.exams.field.opens_at')),
                     Forms\Components\DateTimePicker::make('availability.closes_at')->label(__('panel.exams.field.closes_at')),
                     Forms\Components\TextInput::make('availability.max_attempts')
@@ -211,6 +220,46 @@ final class ExamResource extends Resource
                 ->options(fn (): array => QuestionBank::query()->orderBy('name')->pluck('name', 'id')->all())
                 ->visible(fn (Get $get): bool => $get('selection_mode') === SelectionMode::Random->value),
         ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function studentOptions(string $search): array
+    {
+        return Student::query()
+            ->where(fn ($query) => $query
+                ->where('first_name', 'like', "%{$search}%")
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('student_code', 'like', "%{$search}%"))
+            ->orderBy('first_name')
+            ->limit(50)
+            ->get()
+            ->mapWithKeys(fn (Student $student): array => [
+                $student->getKey() => self::studentLabel($student),
+            ])
+            ->all();
+    }
+
+    /**
+     * @param  array<int, int|string>  $values
+     * @return array<int, string>
+     */
+    private static function studentLabels(array $values): array
+    {
+        return Student::query()
+            ->whereIn('id', $values)
+            ->get()
+            ->mapWithKeys(fn (Student $student): array => [
+                $student->getKey() => self::studentLabel($student),
+            ])
+            ->all();
+    }
+
+    private static function studentLabel(Student $student): string
+    {
+        return trim($student->first_name.' '.(string) $student->last_name)
+            .' · '.(string) $student->student_code;
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Domain\Learning\Data\ImportReport;
 use App\Domain\Learning\Data\ImportRowError;
 use App\Domain\Learning\Data\QuestionData;
 use App\Domain\Learning\Enums\Difficulty;
+use App\Domain\Learning\Enums\MediaKind;
 use App\Domain\Learning\Enums\QuestionStatus;
 use App\Domain\Learning\Enums\QuestionType;
 use App\Domain\Learning\Exceptions\InvalidQuestionContentException;
@@ -15,6 +16,7 @@ use App\Domain\Learning\Exceptions\QuestionImportException;
 use App\Domain\Learning\Models\Question;
 use App\Domain\Learning\Models\QuestionBank;
 use App\Domain\Learning\Services\QuestionContentValidator;
+use App\Domain\Learning\Support\MediaBundle;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -56,6 +58,10 @@ final class ImportQuestions
     ) {}
 
     /**
+     * The `audio_file` / `image_file` columns name entries inside $media, the
+     * ZIP that ships alongside the CSV (docs/05 §3). Without a bundle those
+     * columns are ignored, exactly as before — the CSV-only path is unchanged.
+     *
      * @param  array{
      *     all_or_nothing?: bool,
      *     status?: QuestionStatus,
@@ -66,7 +72,7 @@ final class ImportQuestions
      *
      * @throws QuestionImportException
      */
-    public function handle(string $path, QuestionBank $bank, array $options = []): ImportReport
+    public function handle(string $path, QuestionBank $bank, array $options = [], ?MediaBundle $media = null): ImportReport
     {
         $allOrNothing = $options['all_or_nothing'] ?? true;
         $status = $options['status'] ?? QuestionStatus::Draft;
@@ -81,7 +87,7 @@ final class ImportQuestions
 
         foreach ($rows as $line => $row) {
             try {
-                $prepared[] = [$line, $this->toQuestionData($row, $bank, $createdBy, $batchId)];
+                $prepared[] = [$line, $this->toQuestionData($row, $bank, $createdBy, $batchId, $media)];
             } catch (InvalidQuestionContentException $exception) {
                 $errors[] = new ImportRowError($line, $exception->flatErrors(), null, $row);
             } catch (Throwable $exception) {
@@ -90,6 +96,10 @@ final class ImportQuestions
         }
 
         if ($errors !== [] && $allOrNothing) {
+            // Media files were stored while rows were prepared; a rolled-back
+            // import must not leave orphan objects on the tenant disk.
+            $media?->purge();
+
             $report = new ImportReport($batchId, count($rows), 0, $errors, true);
 
             throw QuestionImportException::rolledBack($report);
@@ -112,6 +122,8 @@ final class ImportQuestions
                 }
             });
         } catch (Throwable $exception) {
+            $media?->purge();
+
             $report = new ImportReport(
                 $batchId,
                 count($rows),
@@ -153,11 +165,13 @@ final class ImportQuestions
     }
 
     /**
-     * Validate a file without writing anything — the "preview" step in the panel.
+     * Validate a file without writing anything — the "preview" step in the
+     * panel. A media bundle, when given, is validated too (existence, real
+     * MIME type, size) but nothing is stored.
      *
      * @param  array<string, mixed>  $options
      */
-    public function dryRun(string $path, QuestionBank $bank, array $options = []): ImportReport
+    public function dryRun(string $path, QuestionBank $bank, array $options = [], ?MediaBundle $media = null): ImportReport
     {
         $rows = $this->readRows($path, $options['delimiter'] ?? null);
         $errors = [];
@@ -165,7 +179,7 @@ final class ImportQuestions
 
         foreach ($rows as $line => $row) {
             try {
-                $this->toQuestionData($row, $bank, null, '');
+                $this->toQuestionData($row, $bank, null, '', $media, storeMedia: false);
                 $ok++;
             } catch (Throwable $exception) {
                 $errors[] = new ImportRowError($line, [$exception->getMessage()], null, $row);
@@ -236,8 +250,14 @@ final class ImportQuestions
      *
      * @throws InvalidQuestionContentException
      */
-    private function toQuestionData(array $row, QuestionBank $bank, ?int $createdBy, string $batchId): QuestionData
-    {
+    private function toQuestionData(
+        array $row,
+        QuestionBank $bank,
+        ?int $createdBy,
+        string $batchId,
+        ?MediaBundle $media = null,
+        bool $storeMedia = true,
+    ): QuestionData {
         $rawType = strtoupper(str_replace('-', '_', trim($row['type'] ?? '')));
         $type = QuestionType::tryFrom($rawType);
 
@@ -251,6 +271,7 @@ final class ImportQuestions
 
         $content = $this->contentFrom($row);
         $options = $this->optionsFrom($row);
+        $mediaRows = $this->attachMedia($row, $content, $media, $storeMedia);
 
         $errors = $this->validator->errorsFor($type, $content);
 
@@ -270,9 +291,55 @@ final class ImportQuestions
             difficulty: Difficulty::tryFrom(strtolower($row['difficulty'] ?? '')) ?? Difficulty::Medium,
             tags: $this->tagsFrom($row['tags'] ?? ''),
             options: $options,
+            media: $mediaRows,
             createdBy: $createdBy,
             importBatchId: $batchId !== '' ? $batchId : null,
         );
+    }
+
+    /**
+     * Resolve the `audio_file` / `image_file` columns against the media bundle:
+     * the file is validated (and stored, unless this is a dry run), the
+     * matching content key is filled in so the same per-type validation the
+     * panel uses still applies, and a question_media row is described for
+     * CreateQuestion to write inside the import transaction.
+     *
+     * @param  array<string, string>  $row
+     * @param  array<string, mixed>  $content
+     * @return array<int, array{kind: string, s3_path: string, mime: string, size_bytes: int}>
+     */
+    private function attachMedia(array $row, array &$content, ?MediaBundle $media, bool $store): array
+    {
+        if (! $media instanceof MediaBundle) {
+            return [];
+        }
+
+        $attached = [];
+
+        $wanted = [
+            ['audio_file', MediaKind::Audio, 'audio_key'],
+            ['image_file', MediaKind::Image, 'image_key'],
+        ];
+
+        foreach ($wanted as [$column, $kind, $contentKey]) {
+            $name = trim($row[$column] ?? '');
+
+            if ($name === '') {
+                continue;
+            }
+
+            $meta = $store ? $media->stage($name, $kind) : $media->inspect($name, $kind);
+
+            // An explicit audio_key/image_key in the CSV wins — that is the
+            // round-trip format — the bundle only fills the gap.
+            if (($content[$contentKey] ?? '') === '') {
+                $content[$contentKey] = $meta['s3_path'];
+            }
+
+            $attached[] = $meta;
+        }
+
+        return $attached;
     }
 
     /**

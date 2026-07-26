@@ -6,6 +6,7 @@ namespace App\Domain\Identity\Actions;
 
 use App\Domain\Identity\Enums\MembershipStatus;
 use App\Domain\Identity\Enums\SystemRole;
+use App\Domain\Identity\Events\RoleChanged;
 use App\Domain\Identity\Models\AcademyUserRole;
 use App\Domain\Identity\Models\Role;
 use App\Domain\Tenancy\Models\Academy;
@@ -36,7 +37,7 @@ final class AssignRole
         return TenantContext::runFor($academy, function () use ($user, $academy, $role, $status, $invitedBy): AcademyUserRole {
             $resolved = $this->resolveRole($academy, $role);
 
-            return DB::transaction(function () use ($user, $academy, $resolved, $status, $invitedBy): AcademyUserRole {
+            $membership = DB::transaction(function () use ($user, $academy, $resolved, $status, $invitedBy): AcademyUserRole {
                 /** @var AcademyUserRole $membership */
                 $membership = AcademyUserRole::query()->updateOrCreate(
                     [
@@ -59,6 +60,15 @@ final class AssignRole
 
                 return $membership;
             });
+
+            // Mandatory audit hook (docs/02 §7). Only an *active* grant is a
+            // role change — an invitation confers nothing until accepted, and
+            // is announced by InviteStaffMember as StaffInvited instead.
+            if ($status === MembershipStatus::Active) {
+                RoleChanged::dispatch($membership);
+            }
+
+            return $membership;
         });
     }
 

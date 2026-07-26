@@ -6,6 +6,7 @@ namespace App\Domain\Identity\Actions;
 
 use App\Domain\Identity\Enums\MembershipStatus;
 use App\Domain\Identity\Enums\SystemRole;
+use App\Domain\Identity\Events\StaffInvited;
 use App\Domain\Identity\Models\AcademyUserRole;
 use App\Domain\Identity\Models\Role;
 use App\Domain\Tenancy\Models\Academy;
@@ -34,7 +35,7 @@ final class InviteStaffMember
     ): AcademyUserRole {
         $email = Str::lower(trim($email));
 
-        return DB::transaction(function () use ($academy, $email, $role, $name, $invitedBy): AcademyUserRole {
+        $membership = DB::transaction(function () use ($academy, $email, $role, $name, $invitedBy): AcademyUserRole {
             $user = User::query()->firstOrCreate(
                 ['email' => $email],
                 [
@@ -58,5 +59,10 @@ final class InviteStaffMember
                 $invitedBy,
             );
         });
+
+        // Mandatory audit hook (docs/02 §7).
+        StaffInvited::dispatch($membership);
+
+        return $membership;
     }
 }

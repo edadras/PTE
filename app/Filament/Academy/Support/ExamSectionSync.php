@@ -4,75 +4,32 @@ declare(strict_types=1);
 
 namespace App\Filament\Academy\Support;
 
-use App\Domain\Assessment\Enums\SelectionMode;
+use App\Domain\Assessment\Actions\UpsertExamSectionQuestions;
 use App\Domain\Assessment\Models\Exam;
-use App\Domain\Assessment\Models\ExamQuestion;
-use App\Domain\Assessment\Models\ExamSection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Projects the builder's `selection_config.question_ids` onto `exam_questions`.
+ * Walks an exam's sections and hands each one's chosen question ids to the
+ * domain action.
  *
- * Manual and pool sections keep explicit rows (SelectionMode::usesExplicitQuestions),
- * and PublishExam counts them, so the two have to be kept in step. There is no
- * Assessment action for this yet — see the hand-over notes.
+ * The projection itself lives in Assessment — this is only the builder-shaped
+ * entry point that reads `selection_config.question_ids` off the saved form
+ * state. One transaction around the whole exam, so a half-projected exam can
+ * never be what PublishExam counts.
  */
 final class ExamSectionSync
 {
+    public function __construct(private readonly UpsertExamSectionQuestions $upsert) {}
+
     public function handle(Exam $exam): void
     {
         DB::transaction(function () use ($exam): void {
             foreach ($exam->sections()->get() as $section) {
-                $this->syncSection($section);
+                /** @var array<int, int> $ids */
+                $ids = (array) $section->config('question_ids', []);
+
+                $this->upsert->handle($section, $ids);
             }
         });
-    }
-
-    private function syncSection(ExamSection $section): void
-    {
-        if (! $section->selection_mode->usesExplicitQuestions()) {
-            ExamQuestion::query()->where('exam_section_id', $section->getKey())->delete();
-
-            return;
-        }
-
-        /** @var array<int, int> $ids */
-        $ids = array_values(array_unique(array_map(
-            intval(...),
-            (array) $section->config('question_ids', []),
-        )));
-
-        ExamQuestion::query()
-            ->where('exam_section_id', $section->getKey())
-            ->whereNotIn('question_id', $ids === [] ? [0] : $ids)
-            ->delete();
-
-        $score = $this->perQuestionScore($section, count($ids));
-
-        foreach ($ids as $order => $questionId) {
-            ExamQuestion::query()->updateOrCreate(
-                [
-                    'exam_section_id' => $section->getKey(),
-                    'question_id' => $questionId,
-                ],
-                [
-                    'sort_order' => $order,
-                    'score' => $score,
-                ],
-            );
-        }
-    }
-
-    private function perQuestionScore(ExamSection $section, int $count): ?float
-    {
-        if ($count < 1 || $section->score <= 0.0) {
-            return null;
-        }
-
-        $take = $section->selection_mode === SelectionMode::Pool
-            ? max(1, (int) $section->config('take', $count))
-            : $count;
-
-        return round($section->score / $take, 4);
     }
 }

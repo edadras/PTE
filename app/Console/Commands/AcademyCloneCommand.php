@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Console\Commands\Concerns\ResolvesAcademy;
-use App\Domain\Audit\Enums\AuditAction;
-use App\Domain\Audit\Services\AuditRecorder;
 use App\Domain\Learning\Actions\CloneQuestionBank;
 use App\Domain\Learning\Models\QuestionBank;
 use App\Domain\Tenancy\Actions\CloneAcademy;
@@ -41,7 +39,7 @@ final class AcademyCloneCommand extends Command
 
     protected $description = 'Clone an academy: brand, settings, modules, message templates and optionally its content.';
 
-    public function handle(CloneAcademy $clone, CloneQuestionBank $cloneBank, AuditRecorder $audit): int
+    public function handle(CloneAcademy $clone, CloneQuestionBank $cloneBank): int
     {
         $source = $this->requireAcademy($this->argument('from'), withTrashed: false);
 
@@ -70,13 +68,6 @@ final class AcademyCloneCommand extends Command
         if ($this->option('content') === true) {
             $banks = $this->copyContent($source, $target, $cloneBank);
         }
-
-        $audit->recordPlatform(AuditAction::AcademyCloned, $target, [
-            'source_academy_id' => (int) $source->getKey(),
-            'source_slug' => $source->slug,
-            'with_content' => $this->option('content') === true,
-            'question_banks_copied' => $banks,
-        ]);
 
         $this->components->info(__('reports.console.academy_cloned', [
             'source' => (string) $source->slug,

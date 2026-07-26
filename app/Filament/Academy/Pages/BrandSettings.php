@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Filament\Academy\Pages;
 
+use App\Domain\Commerce\Services\QuotaGuard;
 use App\Domain\Tenancy\Data\PlaceholderContext;
 use App\Domain\Tenancy\Enums\DarkMode;
 use App\Domain\Tenancy\Models\AcademyBrand;
 use App\Domain\Tenancy\Services\BrandResolver;
 use App\Domain\Tenancy\Services\PlaceholderRenderer;
+use App\Domain\Tenancy\Support\CssSanitizer;
 use App\Domain\Tenancy\TenantContext;
 use Filament\Actions\Action;
 use Filament\Forms;
@@ -121,6 +123,13 @@ final class BrandSettings extends Page
                                         'Inter' => 'Inter',
                                     ])
                                     ->default('Vazirmatn'),
+                                Forms\Components\Textarea::make('custom_css')
+                                    ->label(__('panel.brand.field.custom_css'))
+                                    ->rows(10)
+                                    ->extraInputAttributes(['dir' => 'ltr', 'class' => 'font-mono'])
+                                    ->helperText(__('panel.brand.help.custom_css'))
+                                    ->visible(fn (): bool => self::customCssAllowed())
+                                    ->columnSpanFull(),
                             ])
                             ->columns(3),
 
@@ -185,13 +194,63 @@ final class BrandSettings extends Page
     {
         Gate::authorize('academy.brand.update');
 
+        $state = $this->form->getState();
+        $state = $this->sanitizeCustomCss($state);
+
         $brand = $this->brand();
-        $brand->fill($this->form->getState());
+        $brand->fill($state);
         $brand->save();
 
         app(BrandResolver::class)->forget(TenantContext::require());
 
         Notification::make()->success()->title(__('panel.brand.saved'))->send();
+    }
+
+    /**
+     * Tenant CSS is hostile input (docs/12 §6): plan-gated, allow-listed, and
+     * whatever the sanitiser removed is shown to the author instead of being
+     * silently dropped.
+     *
+     * @param  array<string, mixed>  $state
+     * @return array<string, mixed>
+     */
+    private function sanitizeCustomCss(array $state): array
+    {
+        if (! self::customCssAllowed()) {
+            unset($state['custom_css']);
+
+            return $state;
+        }
+
+        $css = trim((string) ($state['custom_css'] ?? ''));
+
+        if ($css === '') {
+            $state['custom_css'] = null;
+
+            return $state;
+        }
+
+        $result = app(CssSanitizer::class)->sanitize($css);
+
+        $state['custom_css'] = $result['css'] === '' ? null : $result['css'];
+        $this->data['custom_css'] = $state['custom_css'];
+
+        if ($result['stripped'] !== []) {
+            Notification::make()
+                ->warning()
+                ->title(__('panel.brand.notify.css_stripped'))
+                ->body(implode("\n", array_slice($result['stripped'], 0, 10)))
+                ->persistent()
+                ->send();
+        }
+
+        return $state;
+    }
+
+    /** Docs/03 §2: custom CSS is a plan feature, off unless explicitly granted. */
+    private static function customCssAllowed(): bool
+    {
+        return app(QuotaGuard::class)->plan()?->hasFeature('custom_css') === true;
     }
 
     /**

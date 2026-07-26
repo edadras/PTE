@@ -12,6 +12,7 @@ use App\Domain\Tenancy\Data\CreateAcademyData;
 use App\Domain\Tenancy\Enums\AcademyStatus;
 use App\Domain\Tenancy\Enums\DomainType;
 use App\Domain\Tenancy\Enums\SslStatus;
+use App\Domain\Tenancy\Events\AcademyCreated;
 use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Tenancy\Models\AcademyBrand;
 use App\Domain\Tenancy\Models\AcademyDomain;
@@ -72,7 +73,13 @@ final class CreateAcademy
             return $academy;
         });
 
-        return $academy->refresh();
+        $academy->refresh();
+
+        // Mandatory audit hook (docs/02 §7); fired after commit so a listener
+        // never sees a tenant that could still roll back.
+        AcademyCreated::dispatch($academy);
+
+        return $academy;
     }
 
     private function validatedSlug(string $slug): string

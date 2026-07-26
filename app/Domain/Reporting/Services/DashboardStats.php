@@ -6,6 +6,7 @@ namespace App\Domain\Reporting\Services;
 
 use App\Domain\Reporting\Enums\StatMetric;
 use App\Domain\Reporting\Models\DailyStat;
+use App\Domain\Shared\Support\TenantKey;
 use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Support\Carbon;
@@ -182,7 +183,14 @@ final class DashboardStats
      */
     private function live(Academy $academy, Carbon $date): array
     {
-        $key = 'dashboard:live:'.$date->toDateString();
+        /*
+         | The academy has to be in the key itself, not left to the cache
+         | prefix. This method takes the academy as an argument, so it is
+         | routinely called for a tenant other than the resolved one (platform
+         | dashboards, schedulers, the API report reader) — and then a shared
+         | key hands one academy's live counters to another for 60 seconds.
+         */
+        $key = TenantKey::for($academy->getKey(), 'dashboard:live', $date->toDateString());
 
         /** @var array<string, float> $values */
         $values = cache()->remember(

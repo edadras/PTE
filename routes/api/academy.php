@@ -6,6 +6,7 @@ use App\Domain\Integration\Support\ApiBootstrap;
 use App\Http\Controllers\Api\Academy\CourseController;
 use App\Http\Controllers\Api\Academy\ExamController;
 use App\Http\Controllers\Api\Academy\ExamResultController;
+use App\Http\Controllers\Api\Academy\ExportController;
 use App\Http\Controllers\Api\Academy\QuestionBankController;
 use App\Http\Controllers\Api\Academy\QuestionController;
 use App\Http\Controllers\Api\Academy\QuestionImportController;
@@ -45,6 +46,8 @@ Route::prefix('v1')
         */
         Route::middleware(ApiKeyScope::class.':students:read,students:write')->group(function (): void {
             Route::get('students', [StudentController::class, 'index'])->name('students.index');
+            Route::get('students/import/{importId}', [StudentImportController::class, 'show'])
+                ->name('students.import.show');
             Route::get('students/{student}', [StudentController::class, 'show'])->name('students.show');
             Route::get('students/{student}/progress', StudentProgressController::class)
                 ->name('students.progress');
@@ -56,7 +59,7 @@ Route::prefix('v1')
             Route::post('students', [StudentController::class, 'store'])
                 ->middleware(IdempotencyKey::class)
                 ->name('students.store');
-            Route::post('students/import', StudentImportController::class)
+            Route::post('students/import', [StudentImportController::class, 'store'])
                 ->middleware(IdempotencyKey::class)
                 ->name('students.import');
             Route::patch('students/{student}', [StudentController::class, 'update'])->name('students.update');
@@ -106,6 +109,13 @@ Route::prefix('v1')
         Route::get('scores', [ScoreController::class, 'index'])
             ->middleware(ApiKeyScope::class.':scores:read')
             ->name('scores.index');
+
+        /*
+        | Async exports (docs/08 §3: ?format=xlsx → job → signed URL)
+        */
+        Route::get('exports/{report}', ExportController::class)
+            ->middleware(ApiKeyScope::class.':reports:read,exams:read,students:read,scores:read')
+            ->name('exports.show');
 
         /*
         | Reporting

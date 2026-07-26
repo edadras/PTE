@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Tenancy\Actions;
 
 use App\Domain\Tenancy\Data\CreateAcademyData;
+use App\Domain\Tenancy\Events\AcademyCloned;
 use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Tenancy\Models\AcademyBrand;
 use App\Domain\Tenancy\Models\AcademyModule;
@@ -32,7 +33,7 @@ final class CloneAcademy
 
     public function handle(Academy $source, CreateAcademyData $data): Academy
     {
-        return DB::transaction(function () use ($source, $data): Academy {
+        $target = DB::transaction(function () use ($source, $data): Academy {
             $target = $this->createAcademy->handle($data);
 
             TenantContext::runFor($target, function () use ($source, $target): void {
@@ -44,6 +45,12 @@ final class CloneAcademy
 
             return $target->refresh();
         });
+
+        // Mandatory audit hook (docs/02 §7); fired after commit so the clone
+        // cannot still roll back under a listener.
+        AcademyCloned::dispatch($source, $target);
+
+        return $target;
     }
 
     private function copyBrand(Academy $source, Academy $target): void

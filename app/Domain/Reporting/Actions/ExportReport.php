@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Reporting\Actions;
 
+use App\Domain\Reporting\Enums\ReportFormat;
 use App\Domain\Reporting\Enums\ReportStatus;
 use App\Domain\Reporting\Enums\ReportType;
 use App\Domain\Reporting\Events\ReportExported;
@@ -11,15 +12,18 @@ use App\Domain\Reporting\Jobs\GenerateReportJob;
 use App\Domain\Reporting\Models\Report;
 use App\Domain\Reporting\Services\ReportDataSource;
 use App\Domain\Reporting\Support\CsvWriter;
+use App\Domain\Reporting\Support\XlsxWriter;
 use App\Domain\Tenancy\TenantContext;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 use Throwable;
 
 /**
- * Produces a CSV of students, scores or exam results on the tenant disk and
- * hands back a pre-signed link.
+ * Produces a CSV or XLSX of students, scores or exam results on the tenant
+ * disk and hands back a pre-signed link. The format lives on the report row
+ * (reports.format), so the queued path needs no extra plumbing.
  *
  * The file lands under `exports/`, whose lifecycle rule (docs/10 §4) deletes it
  * after `pte.retention.exports` days; `expires_at` on the row mirrors that so
@@ -78,7 +82,7 @@ final class ExportReport
     {
         $report->forceFill(['status' => ReportStatus::Generating])->save();
 
-        $writer = CsvWriter::temporary('pte-report');
+        $writer = $this->writerFor($this->formatOf($report));
 
         try {
             $writer->headers($this->source->headers($report->type));
@@ -124,6 +128,11 @@ final class ExportReport
      */
     private function pending(ReportType $type, array $params, User|int|null $requestedBy, string $format): Report
     {
+        // Reject an unknown format before a row exists: failing here surfaces
+        // in the caller's face, failing in the queue surfaces in a log nobody
+        // is watching.
+        $this->assertKnownFormat($format);
+
         /** @var Report $report */
         $report = Report::query()->create([
             'academy_id' => TenantContext::id(),
@@ -135,6 +144,36 @@ final class ExportReport
         ]);
 
         return $report;
+    }
+
+    private function assertKnownFormat(string $format): void
+    {
+        if ($format !== '' && ! ReportFormat::tryFrom($format) instanceof ReportFormat) {
+            throw new InvalidArgumentException(sprintf(
+                'Report format [%s] is not supported. Known formats: %s.',
+                $format,
+                implode(', ', array_column(ReportFormat::cases(), 'value')),
+            ));
+        }
+    }
+
+    /**
+     * An empty format is a legacy row from before the column was mandatory;
+     * it always meant CSV.
+     */
+    private function formatOf(Report $report): ReportFormat
+    {
+        $this->assertKnownFormat($report->format);
+
+        return ReportFormat::tryFrom($report->format) ?? ReportFormat::Csv;
+    }
+
+    private function writerFor(ReportFormat $format): CsvWriter|XlsxWriter
+    {
+        return match ($format) {
+            ReportFormat::Csv => CsvWriter::temporary('pte-report'),
+            ReportFormat::Xlsx => XlsxWriter::temporary('pte-report'),
+        };
     }
 
     /**

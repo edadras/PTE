@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Console\Commands\Concerns\ResolvesAcademy;
-use App\Domain\Audit\Enums\AuditAction;
-use App\Domain\Audit\Services\AuditRecorder;
+use App\Domain\Telegram\Events\BotWebhookReset;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Domain\Telegram\Services\BotManager;
 use App\Domain\Tenancy\TenantContext;
@@ -35,7 +34,7 @@ final class TelegramResetWebhookCommand extends Command
 
     protected $description = 'Remove and re-register an academy bot webhook.';
 
-    public function handle(BotManager $manager, AuditRecorder $audit): int
+    public function handle(BotManager $manager): int
     {
         $academy = $this->requireAcademy($this->argument('academy'), withTrashed: false);
 
@@ -43,7 +42,7 @@ final class TelegramResetWebhookCommand extends Command
             return self::FAILURE;
         }
 
-        return TenantContext::runFor($academy, function () use ($academy, $manager, $audit): int {
+        return TenantContext::runFor($academy, function () use ($academy, $manager): int {
             $publicId = $this->option('bot');
 
             $bot = is_string($publicId) && $publicId !== ''
@@ -67,10 +66,9 @@ final class TelegramResetWebhookCommand extends Command
                 return self::FAILURE;
             }
 
-            $audit->record(AuditAction::BotWebhookReset, $bot, [], [
-                'webhook_url' => $bot->webhookUrl(),
-                'dropped_pending' => $drop,
-            ], (int) $academy->getKey());
+            // The audit row is written by RecordWebhookReset, so a reset
+            // triggered from the panel or the API is recorded identically.
+            BotWebhookReset::dispatch($bot, $drop);
 
             $this->components->info(__('reports.console.webhook_reset', [
                 'bot' => (string) ($bot->username ?? $bot->public_id),

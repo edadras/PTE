@@ -5,28 +5,40 @@ declare(strict_types=1);
 namespace App\Domain\Integration\Services;
 
 use App\Domain\AI\Models\AiRequest;
-use App\Domain\Assessment\Models\ExamSession;
-use App\Domain\Assessment\Models\PracticeSession;
 use App\Domain\Assessment\Models\Score;
 use App\Domain\Commerce\Data\QuotaResult;
 use App\Domain\Commerce\Services\QuotaGuard;
 use App\Domain\Identity\Enums\StudentStatus;
 use App\Domain\Identity\Models\Student;
 use App\Domain\Learning\Models\Question;
+use App\Domain\Reporting\Enums\StatMetric;
+use App\Domain\Reporting\Services\DashboardStats;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Support\Carbon;
 
 /**
  * Read models for the reporting endpoints of docs/08 §3.
  *
- * This lives in a service rather than a controller for the reason CONVENTIONS
- * §6 gives: the panel and the API must show the same numbers, and the only way
- * to guarantee that is for them to run the same code. It is a stopgap: the
- * Reporting context owns this kind of read model, and these two methods should
- * move onto its collectors once their shape has settled.
+ * Period counters delegate to Reporting's DashboardStats — daily_stats rolled
+ * up by StatMetric aggregation, with only "today" computed live — so the panel
+ * and the API read the same numbers from the same code (CONVENTIONS §6).
+ *
+ * What remains inline is what Reporting does not yet own, kept as a thin
+ * adapter on purpose:
+ *  - `students.active` — a *status* count; StatMetric::StudentsActive means
+ *    "answered today", a different fact;
+ *  - `content.questions` — no content-size metric exists;
+ *  - `activity.scores` / `average_percentage` — Score-based, where the
+ *    collector's AverageScore is Answer-based;
+ *  - the whole of aiUsage() — token/cache-hit/failure breakdowns are not
+ *    collected, and mixing daily_stats counts with live token sums would
+ *    produce a self-contradictory payload.
+ * Each should move to a Reporting collector method, then delete here.
  */
 final class ApiReportReader
 {
+    public function __construct(private readonly DashboardStats $stats) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -34,18 +46,22 @@ final class ApiReportReader
     {
         $since ??= now()->subDays(30);
 
+        $academy = TenantContext::require();
+        $from = $since->copy();
+        $to = $this->stats->today($academy);
+
         return [
             'students' => [
-                'total' => Student::query()->count(),
+                'total' => (int) $this->stats->summary(StatMetric::StudentsTotal, $from, $to, $academy),
                 'active' => Student::query()->where('status', StudentStatus::Active->value)->count(),
-                'new_in_period' => Student::query()->where('created_at', '>=', $since)->count(),
+                'new_in_period' => (int) $this->stats->summary(StatMetric::StudentsNew, $from, $to, $academy),
             ],
             'content' => [
                 'questions' => Question::query()->count(),
             ],
             'activity' => [
-                'practice_sessions' => PracticeSession::query()->where('created_at', '>=', $since)->count(),
-                'exam_sessions' => ExamSession::query()->where('created_at', '>=', $since)->count(),
+                'practice_sessions' => (int) $this->stats->summary(StatMetric::PracticeSessions, $from, $to, $academy),
+                'exam_sessions' => (int) $this->stats->summary(StatMetric::ExamSessions, $from, $to, $academy),
                 'scores' => Score::query()->where('created_at', '>=', $since)->count(),
                 'average_percentage' => round(
                     (float) Score::query()->where('created_at', '>=', $since)->avg('percentage'),
