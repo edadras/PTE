@@ -14,10 +14,12 @@ use App\Filament\Academy\Support\StudentCsv;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -200,11 +202,11 @@ final class StudentResource extends Resource
     {
         // No academy filter here on purpose — BelongsToAcademy already applied it.
         return parent::getEloquentQuery()
-            ->withoutGlobalScopes([\Illuminate\Database\Eloquent\SoftDeletingScope::class]);
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
     }
 
     /**
-     * @return array<string, \Filament\Resources\Pages\PageRegistration>
+     * @return array<string, PageRegistration>
      */
     public static function getPages(): array
     {

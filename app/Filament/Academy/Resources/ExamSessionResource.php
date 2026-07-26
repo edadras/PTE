@@ -10,6 +10,7 @@ use App\Domain\Assessment\Models\ExamSession;
 use App\Filament\Academy\Resources\ExamSessionResource\Pages;
 use Filament\Infolists;
 use Filament\Infolists\Infolist;
+use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -135,7 +136,7 @@ final class ExamSessionResource extends Resource
     }
 
     /**
-     * @return array<string, \Filament\Resources\Pages\PageRegistration>
+     * @return array<string, PageRegistration>
      */
     public static function getPages(): array
     {

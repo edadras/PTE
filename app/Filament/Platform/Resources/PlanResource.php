@@ -9,6 +9,7 @@ use App\Domain\Commerce\Models\Plan;
 use App\Filament\Platform\Resources\PlanResource\Pages;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -144,7 +145,7 @@ final class PlanResource extends Resource
     }
 
     /**
-     * @return array<string, \Filament\Resources\Pages\PageRegistration>
+     * @return array<string, PageRegistration>
      */
     public static function getPages(): array
     {

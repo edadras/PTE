@@ -121,6 +121,23 @@ final class ExportReportTest extends TestCase
     }
 
     #[Test]
+    public function the_queued_job_fills_the_registered_report(): void
+    {
+        Student::factory()->count(2)->create();
+
+        $report = app(ExportReport::class)->queue(ReportType::Students);
+
+        (new GenerateReportJob((int) $this->academy->getKey(), (int) $report->getKey()))
+            ->handle(app(ExportReport::class));
+
+        $report->refresh();
+
+        $this->assertSame(ReportStatus::Ready, $report->status);
+        $this->assertSame(2, $report->row_count);
+        Storage::disk('tenant')->assertExists((string) $report->file_path);
+    }
+
+    #[Test]
     public function a_cell_that_looks_like_a_spreadsheet_formula_is_neutralised(): void
     {
         Student::factory()->create(['first_name' => '=cmd|/c calc']);

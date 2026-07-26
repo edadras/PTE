@@ -8,6 +8,8 @@ use App\Domain\Assessment\Actions\PublishExam;
 use App\Domain\Assessment\Models\Exam;
 use App\Domain\Notification\Enums\ScheduledContentType;
 use App\Domain\Notification\Models\ScheduledContent;
+use App\Domain\Telegram\Actions\StartBroadcast;
+use App\Domain\Telegram\Models\Broadcast;
 use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Bus\Queueable;
@@ -163,11 +165,10 @@ final class DispatchScheduledContents implements ShouldQueue
             return;
         }
 
-        $broadcastClass = \App\Domain\Telegram\Models\Broadcast::class;
-        $broadcast = $broadcastClass::query()->find($content->target_id);
+        $broadcast = Broadcast::query()->find($content->target_id);
 
-        if ($broadcast !== null) {
-            app(\App\Domain\Telegram\Actions\StartBroadcast::class)->handle($broadcast);
+        if ($broadcast instanceof Broadcast) {
+            app(StartBroadcast::class)->handle($broadcast);
         }
     }
 }

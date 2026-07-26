@@ -8,6 +8,8 @@ use App\Domain\Audit\Enums\AuditAction;
 use App\Domain\Audit\Models\PlatformAuditLog;
 use App\Domain\Audit\OpsServiceProvider;
 use App\Domain\Identity\Models\Student;
+use App\Domain\Learning\Models\Question;
+use App\Domain\Learning\Models\QuestionBank;
 use App\Domain\Tenancy\Enums\AcademyStatus;
 use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Tenancy\Models\AcademyBrand;
@@ -152,6 +154,36 @@ final class AcademyCommandsTest extends TestCase
         $this->assertTrue(
             PlatformAuditLog::query()->where('action', AuditAction::AcademyCloned->value)->forAcademy($target)->exists()
         );
+    }
+
+    #[Test]
+    public function cloning_with_content_copies_the_question_banks_as_owned_rows(): void
+    {
+        $source = Academy::factory()->configured()->create(['slug' => 'source']);
+
+        TenantContext::runFor($source, function (): void {
+            $bank = QuestionBank::factory()->create(['name' => 'Starter pack']);
+            Question::factory()->count(2)->create(['bank_id' => $bank->getKey()]);
+        });
+
+        $this->artisan('academy:clone', [
+            'from' => 'source',
+            'to' => 'Source Two',
+            '--slug' => 'source-two',
+            '--content' => true,
+        ])->assertSuccessful();
+
+        $target = Academy::query()->withoutGlobalScopes()->where('slug', 'source-two')->firstOrFail();
+
+        TenantContext::runFor($target, function (): void {
+            $this->assertSame(1, QuestionBank::query()->count());
+            $this->assertSame(2, Question::query()->count());
+        });
+
+        // A copy, not a share: the source keeps its own rows untouched.
+        TenantContext::runFor($source, function (): void {
+            $this->assertSame(2, Question::query()->count());
+        });
     }
 
     #[Test]

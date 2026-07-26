@@ -9,6 +9,7 @@ use App\Domain\Notification\Enums\NotificationChannel;
 use App\Domain\Notification\Enums\NotificationStatus;
 use App\Domain\Notification\Models\Notification;
 use Database\Factories\Concerns\ResolvesAcademy;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -61,7 +62,7 @@ final class NotificationFactory extends Factory
         ]);
     }
 
-    public function scheduledFor(\DateTimeInterface $moment): self
+    public function scheduledFor(DateTimeInterface $moment): self
     {
         return $this->state(fn (): array => [
             'scheduled_at' => $moment,

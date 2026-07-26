@@ -15,6 +15,7 @@ use Filament\Forms;
 use Filament\Infolists;
 use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -68,7 +69,7 @@ final class AnswerResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $pending = static::getModel()::query()
+        $pending = self::getModel()::query()
             ->whereIn('scoring_status', [ScoringStatus::ManualReview->value, ScoringStatus::Failed->value])
             ->count();
 
@@ -238,7 +239,7 @@ final class AnswerResource extends Resource
     }
 
     /**
-     * @return array<string, \Filament\Resources\Pages\PageRegistration>
+     * @return array<string, PageRegistration>
      */
     public static function getPages(): array
     {

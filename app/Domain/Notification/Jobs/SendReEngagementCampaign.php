@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Notification\Jobs;
 
+use App\Domain\Identity\Models\Student;
 use App\Domain\Notification\Enums\NotificationChannel;
 use App\Domain\Notification\Models\Notification;
 use App\Domain\Notification\Services\AudienceResolver;
@@ -12,6 +13,7 @@ use App\Domain\Shared\Jobs\TenantAwareJob;
 use App\Domain\Tenancy\Data\PlaceholderContext;
 use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Tenancy\TenantContext;
+use Illuminate\Support\Carbon;
 
 /**
  * Win back students who have not practised for a week (docs/05 §6).
@@ -83,10 +85,10 @@ final class SendReEngagementCampaign extends TenantAwareJob
         return $sent;
     }
 
-    private function contactedRecently(int $studentId, \Illuminate\Support\Carbon $since): bool
+    private function contactedRecently(int $studentId, Carbon $since): bool
     {
         return Notification::query()
-            ->where('notifiable_type', \App\Domain\Identity\Models\Student::class)
+            ->where('notifiable_type', Student::class)
             ->where('notifiable_id', $studentId)
             ->where('created_at', '>=', $since)
             // A JSON path comparison rather than whereJsonContains: the latter

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\AI\AiServiceProvider;
+use App\Domain\Audit\OpsServiceProvider;
 use App\Domain\Identity\Providers\AuthorizationServiceProvider;
 use App\Domain\Integration\Providers\IntegrationServiceProvider;
 use App\Providers\AppServiceProvider;
@@ -13,5 +14,6 @@ return [
     AuthorizationServiceProvider::class,
     AiServiceProvider::class,
     IntegrationServiceProvider::class,
+    OpsServiceProvider::class,
     RateLimitServiceProvider::class,
 ];

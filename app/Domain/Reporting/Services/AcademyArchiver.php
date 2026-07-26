@@ -6,6 +6,7 @@ namespace App\Domain\Reporting\Services;
 
 use App\Domain\Reporting\Support\CsvWriter;
 use App\Domain\Tenancy\Models\Academy;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
@@ -167,7 +168,7 @@ final class AcademyArchiver
     }
 
     /**
-     * @param  \Illuminate\Database\Query\Builder  $query
+     * @param  Builder  $query
      * @return array<string, mixed>
      */
     private function dump(string $table, string $path, $query): array

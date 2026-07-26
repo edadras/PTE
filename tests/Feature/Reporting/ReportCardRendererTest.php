@@ -10,7 +10,6 @@ use App\Domain\Assessment\Models\Answer;
 use App\Domain\Assessment\Models\PracticeSession;
 use App\Domain\Identity\Models\Student;
 use App\Domain\Identity\Models\StudentProgress;
-use App\Domain\Learning\Enums\ModuleKey;
 use App\Domain\Learning\Enums\QuestionType;
 use App\Domain\Reporting\Services\ReportCardRenderer;
 use App\Domain\Reporting\Services\StudentProgressReport;

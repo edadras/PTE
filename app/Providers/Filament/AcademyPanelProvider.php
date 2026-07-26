@@ -96,6 +96,13 @@ final class AcademyPanelProvider extends PanelProvider
                 fn (): string => view('filament.components.impersonation-banner')->render(),
             )
             ->middleware([
+                // First on purpose. Laravel's middleware priority list pulls
+                // Authenticate ahead of anything unprioritised that follows
+                // SubstituteBindings, so tenant resolution has to sit in front
+                // of the whole stack: an unknown host must 404 before the panel
+                // ever offers a login form, and the permission team id must be
+                // installed before the first Gate check.
+                ResolveTenantFromDomain::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
@@ -105,9 +112,6 @@ final class AcademyPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-                // Must precede the auth middleware: it installs the permission
-                // team id that every Gate check below depends on.
-                ResolveTenantFromDomain::class,
                 EnforceImpersonationWindow::class,
             ], isPersistent: true)
             ->authMiddleware([

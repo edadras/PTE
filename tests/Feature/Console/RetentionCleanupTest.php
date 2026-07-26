@@ -24,6 +24,7 @@ use App\Domain\Telegram\Models\TelegramUpdate;
 use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Tenancy\Models\AcademySettings;
 use App\Domain\Tenancy\TenantContext;
+use DateTimeInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
@@ -206,7 +207,7 @@ final class RetentionCleanupTest extends TestCase
         $this->assertSame(1, TelegramUpdate::query()->count());
     }
 
-    private function telegramUpdate(\DateTimeInterface $at): void
+    private function telegramUpdate(DateTimeInterface $at): void
     {
         TelegramUpdate::query()->create([
             'telegram_bot_id' => $this->bot->getKey(),
@@ -217,7 +218,7 @@ final class RetentionCleanupTest extends TestCase
         ]);
     }
 
-    private function telegramMessage(\DateTimeInterface $at): void
+    private function telegramMessage(DateTimeInterface $at): void
     {
         TelegramMessage::query()->create([
             'telegram_bot_id' => $this->bot->getKey(),
@@ -230,7 +231,7 @@ final class RetentionCleanupTest extends TestCase
         ]);
     }
 
-    private function aiLog(\DateTimeInterface $at): void
+    private function aiLog(DateTimeInterface $at): void
     {
         $request = AiRequest::factory()->create(['created_at' => $at]);
 
@@ -242,7 +243,7 @@ final class RetentionCleanupTest extends TestCase
         ]);
     }
 
-    private function report(\DateTimeInterface $expiresAt): Report
+    private function report(DateTimeInterface $expiresAt): Report
     {
         $name = $expiresAt < now() ? 'expired' : 'fresh';
 

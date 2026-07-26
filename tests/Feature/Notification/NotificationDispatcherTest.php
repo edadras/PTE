@@ -14,6 +14,7 @@ use App\Domain\Notification\Services\NotificationDispatcher;
 use App\Domain\Notification\Services\NullSmsDriver;
 use App\Domain\Telegram\Jobs\SendTelegramMessage;
 use App\Domain\Telegram\Models\TelegramIdentity;
+use App\Domain\Tenancy\Data\PlaceholderContext;
 use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Tenancy\Models\MessageTemplate;
 use App\Domain\Tenancy\TenantContext;
@@ -93,7 +94,7 @@ final class NotificationDispatcherTest extends TestCase
 
         $body = app(NotificationDispatcher::class)->body(
             $notification,
-            \App\Domain\Tenancy\Data\PlaceholderContext::make(['first_name' => 'Sara'])->forAcademy($this->academy),
+            PlaceholderContext::make(['first_name' => 'Sara'])->forAcademy($this->academy),
             $this->academy,
         );
 

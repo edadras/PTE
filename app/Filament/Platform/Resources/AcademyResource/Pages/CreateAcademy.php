@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Platform\Resources\AcademyResource\Pages;
 
+use App\Domain\Audit\Enums\AuditAction;
 use App\Domain\Tenancy\Actions\CreateAcademy as CreateAcademyAction;
 use App\Domain\Tenancy\Data\CreateAcademyData;
 use App\Filament\Platform\Resources\AcademyResource;
@@ -30,12 +31,10 @@ final class CreateAcademy extends CreateRecord
         );
 
         PlatformAudit::record(
-            action: PlatformAudit::ACTION_ACADEMY_CREATE,
+            action: AuditAction::AcademyCreated,
             actor: auth()->user() instanceof User ? auth()->user() : null,
-            academyId: (int) $academy->getKey(),
-            subjectType: $academy::class,
-            subjectId: (int) $academy->getKey(),
-            newValues: ['name' => $academy->name, 'slug' => $academy->slug],
+            target: $academy,
+            payload: ['name' => $academy->name, 'slug' => $academy->slug],
         );
 
         return $academy;

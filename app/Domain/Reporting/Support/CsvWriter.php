@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Reporting\Support;
 
+use BackedEnum;
+use DateTimeInterface;
 use RuntimeException;
 
 /**
@@ -138,8 +140,8 @@ final class CsvWriter
         $string = match (true) {
             $value === null => '',
             is_bool($value) => $value ? '1' : '0',
-            $value instanceof \BackedEnum => (string) $value->value,
-            $value instanceof \DateTimeInterface => $value->format('Y-m-d H:i:s'),
+            $value instanceof BackedEnum => (string) $value->value,
+            $value instanceof DateTimeInterface => $value->format('Y-m-d H:i:s'),
             is_scalar($value) => (string) $value,
             default => (string) json_encode($value, JSON_UNESCAPED_UNICODE),
         };

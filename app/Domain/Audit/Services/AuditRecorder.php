@@ -11,6 +11,8 @@ use App\Domain\Identity\Models\Student;
 use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Tenancy\TenantContext;
 use App\Models\User;
+use BackedEnum;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -293,8 +295,8 @@ final class AuditRecorder
 
             $cleaned[$key] = match (true) {
                 is_array($value) => $this->clean($value) ?? [],
-                $value instanceof \BackedEnum => $value->value,
-                $value instanceof \DateTimeInterface => $value->format(DATE_ATOM),
+                $value instanceof BackedEnum => $value->value,
+                $value instanceof DateTimeInterface => $value->format(DATE_ATOM),
                 is_string($value) => Str::limit($value, self::MAX_VALUE_CHARS, ''),
                 is_scalar($value), $value === null => $value,
                 default => (string) Str::limit((string) json_encode($value), self::MAX_VALUE_CHARS, ''),

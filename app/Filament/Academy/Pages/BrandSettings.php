@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace App\Filament\Academy\Pages;
 
+use App\Domain\Tenancy\Data\PlaceholderContext;
 use App\Domain\Tenancy\Enums\DarkMode;
 use App\Domain\Tenancy\Models\AcademyBrand;
 use App\Domain\Tenancy\Services\BrandResolver;
+use App\Domain\Tenancy\Services\PlaceholderRenderer;
 use App\Domain\Tenancy\TenantContext;
+use Filament\Actions\Action;
 use Filament\Forms;
-use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Notifications\Notification;
+use Filament\Pages\Concerns\InteractsWithFormActions;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Gate;
 
@@ -23,9 +25,9 @@ use Illuminate\Support\Facades\Gate;
  * The welcome/footer preview renders through the same PlaceholderRenderer the
  * bot uses, so what is shown here is what will be sent.
  */
-final class BrandSettings extends Page implements HasForms
+final class BrandSettings extends Page
 {
-    use InteractsWithForms;
+    use InteractsWithFormActions;
 
     protected static ?string $navigationIcon = 'heroicon-o-swatch';
 
@@ -193,12 +195,12 @@ final class BrandSettings extends Page implements HasForms
     }
 
     /**
-     * @return array<int, \Filament\Actions\Action>
+     * @return array<int, Action>
      */
-    protected function getFormActions(): array
+    public function getFormActions(): array
     {
         return [
-            \Filament\Actions\Action::make('save')
+            Action::make('save')
                 ->label(__('panel.common.save'))
                 ->submit('save')
                 ->visible(fn (): bool => auth()->user()?->can('academy.brand.update') === true),
@@ -220,7 +222,7 @@ final class BrandSettings extends Page implements HasForms
 
     private function renderPlaceholders(string $template): string
     {
-        return app(\App\Domain\Tenancy\Services\PlaceholderRenderer::class)
+        return app(PlaceholderRenderer::class)
             ->renderRaw($template, $this->sampleContext());
     }
 
@@ -229,13 +231,13 @@ final class BrandSettings extends Page implements HasForms
      */
     private function unknownPlaceholders(string $template): array
     {
-        return app(\App\Domain\Tenancy\Services\PlaceholderRenderer::class)
+        return app(PlaceholderRenderer::class)
             ->unknown($template, $this->sampleContext());
     }
 
-    private function sampleContext(): \App\Domain\Tenancy\Data\PlaceholderContext
+    private function sampleContext(): PlaceholderContext
     {
-        return \App\Domain\Tenancy\Data\PlaceholderContext::make([
+        return PlaceholderContext::make([
             'first_name' => __('panel.brand.sample.first_name'),
             'last_name' => __('panel.brand.sample.last_name'),
             'full_name' => __('panel.brand.sample.full_name'),

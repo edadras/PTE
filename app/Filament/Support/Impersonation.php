@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
+use App\Domain\Audit\Enums\AuditAction;
 use App\Domain\Tenancy\Models\Academy;
 use App\Filament\Support\Notifications\AcademyImpersonated;
 use App\Models\User;
@@ -116,12 +117,11 @@ final class Impersonation
         }
 
         PlatformAudit::record(
-            action: PlatformAudit::ACTION_IMPERSONATE_START,
+            action: AuditAction::Impersonated,
             actor: $actor,
-            academyId: (int) $academy->getKey(),
-            subjectType: Academy::class,
-            subjectId: (int) $academy->getKey(),
-            newValues: [
+            target: $academy,
+            payload: [
+                'phase' => 'start',
                 'nonce' => $nonce,
                 'expires_at' => now()->addMinutes(self::DURATION_MINUTES)->toIso8601String(),
             ],
@@ -164,12 +164,14 @@ final class Impersonation
 
         if ($payload !== null) {
             PlatformAudit::record(
-                action: PlatformAudit::ACTION_IMPERSONATE_END,
+                action: AuditAction::Impersonated,
                 actor: Auth::user() instanceof User ? Auth::user() : null,
-                academyId: $payload['academy_id'],
-                subjectType: Academy::class,
-                subjectId: $payload['academy_id'],
-                newValues: ['reason' => $reason ?? 'manual'],
+                target: $payload['academy_id'],
+                payload: [
+                    'phase' => 'end',
+                    'reason' => $reason ?? 'manual',
+                    'started_at' => $payload['started_at'],
+                ],
             );
         }
 

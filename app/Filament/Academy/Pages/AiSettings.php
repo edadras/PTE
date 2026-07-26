@@ -8,13 +8,13 @@ use App\Domain\AI\Enums\AiProvider;
 use App\Domain\AI\Enums\AiTaskKey;
 use App\Domain\AI\Models\AcademyAiSetting;
 use App\Domain\AI\Models\AiModel;
+use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Components\Component;
-use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Notifications\Notification;
+use Filament\Pages\Concerns\InteractsWithFormActions;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Gate;
 
@@ -25,9 +25,9 @@ use Illuminate\Support\Facades\Gate;
  * empty submission leaves the stored key untouched. The panel only ever shows
  * the last four characters, which the model maintains itself.
  */
-final class AiSettings extends Page implements HasForms
+final class AiSettings extends Page
 {
-    use InteractsWithForms;
+    use InteractsWithFormActions;
 
     protected static ?string $navigationIcon = 'heroicon-o-cpu-chip';
 
@@ -188,12 +188,12 @@ final class AiSettings extends Page implements HasForms
     }
 
     /**
-     * @return array<int, \Filament\Actions\Action>
+     * @return array<int, Action>
      */
-    protected function getFormActions(): array
+    public function getFormActions(): array
     {
         return [
-            \Filament\Actions\Action::make('save')
+            Action::make('save')
                 ->label(__('panel.common.save'))
                 ->submit('save')
                 ->visible(fn (): bool => auth()->user()?->can('ai.settings.update') === true),

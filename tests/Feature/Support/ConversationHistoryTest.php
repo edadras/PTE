@@ -13,6 +13,7 @@ use App\Domain\Telegram\Models\TelegramIdentity;
 use App\Domain\Telegram\Models\TelegramMessage;
 use App\Domain\Tenancy\Models\Academy;
 use App\Domain\Tenancy\TenantContext;
+use DateTimeInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -113,7 +114,7 @@ final class ConversationHistoryTest extends TestCase
         });
     }
 
-    private function message(string $content, MessageDirection $direction, \DateTimeInterface $at): void
+    private function message(string $content, MessageDirection $direction, DateTimeInterface $at): void
     {
         TelegramMessage::query()->create([
             'telegram_bot_id' => $this->bot->getKey(),

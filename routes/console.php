@@ -6,12 +6,15 @@ use App\Domain\AI\Jobs\DetectAiCostAnomalies;
 use App\Domain\AI\Jobs\ScoringConsistencyAudit;
 use App\Domain\AI\Models\AiLog;
 use App\Domain\Assessment\Jobs\ExpireOverdueExamSessions;
+use App\Domain\Audit\Jobs\CleanupExpiredData;
 use App\Domain\Commerce\Jobs\CheckSubscriptionExpiry;
 use App\Domain\Commerce\Jobs\DetectUnprofitableAcademies;
 use App\Domain\Commerce\Jobs\RollUpUsageCounters;
 use App\Domain\Commerce\Jobs\SendRenewalReminders;
 use App\Domain\Commerce\Jobs\SuspendPastDueAcademies;
 use App\Domain\Learning\Jobs\RecalculateDifficultyIndex;
+use App\Domain\Notification\Jobs\DispatchScheduledContents;
+use App\Domain\Reporting\Jobs\AggregateDailyStats;
 use App\Domain\Telegram\Jobs\CheckBotHealth;
 use App\Domain\Tenancy\Models\Academy;
 use Illuminate\Support\Facades\Schedule;
@@ -88,6 +91,32 @@ Schedule::job(new CheckSubscriptionExpiry)->dailyAt('01:00')->name('billing:expi
 Schedule::job(new SuspendPastDueAcademies)->dailyAt('02:00')->name('billing:suspend');
 Schedule::job(new DetectUnprofitableAcademies)->dailyAt('03:30')->name('billing:profitability');
 Schedule::job(new SendRenewalReminders)->dailyAt('08:00')->name('billing:reminders');
+
+// --- Scheduled content ----------------------------------------------------
+
+// Platform sweep: picks due rows across every tenant and re-enters each one.
+// Every minute because a minute is the smallest unit an academy can schedule;
+// when nothing is due this is one indexed query.
+//
+// The nudge/reminder/progress jobs deliberately have no entry of their own —
+// they are driven by scheduled_contents rows so each academy fires at its own
+// local wall-clock time rather than at a single UTC hour (docs/05 §6).
+Schedule::job(new DispatchScheduledContents)
+    ->everyMinute()
+    ->name('content:dispatch')
+    ->withoutOverlapping();
+
+// --- Reporting ------------------------------------------------------------
+
+// Tenant-aware: one instance per academy, each summarising its own previous
+// local day. Dashboards read these rows instead of scanning `answers`.
+Schedule::call(function () use ($forEachActiveAcademy): void {
+    $forEachActiveAcademy(fn (Academy $a) => AggregateDailyStats::dispatch($a->getKey()));
+})->dailyAt('02:00')->name('reporting:daily-stats')->withoutOverlapping();
+
+// --- Retention ------------------------------------------------------------
+
+Schedule::job(new CleanupExpiredData)->dailyAt('04:00')->name('ops:retention');
 
 // --- Housekeeping ---------------------------------------------------------
 

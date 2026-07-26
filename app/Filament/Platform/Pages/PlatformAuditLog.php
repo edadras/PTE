@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace App\Filament\Platform\Pages;
 
-use App\Filament\Support\PlatformAudit;
+use App\Domain\Audit\Enums\AuditAction;
+use App\Domain\Audit\Models\PlatformAuditLog as PlatformAuditLogModel;
 use Filament\Pages\Page;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Livewire\WithPagination;
 
 /**
- * Viewer for `platform_audit_logs` (docs/02 §7).
- *
- * The table is not created by the migrations that shipped with the domain
- * layer; until it is, PlatformAudit writes to the log channel and this page
- * says so instead of pretending there is nothing to show.
+ * Viewer for `platform_audit_logs` — every Super Admin action across tenants
+ * (docs/02 §7). Read-only by construction: the model refuses updates and
+ * deletes, so there is nothing to expose here but the list.
  */
 final class PlatformAuditLog extends Page
 {
@@ -51,45 +50,27 @@ final class PlatformAuditLog extends Page
         return auth()->user()?->can('platform.logs.view') === true;
     }
 
-    public function isAvailable(): bool
-    {
-        return PlatformAudit::isAvailable();
-    }
-
     /**
-     * @return LengthAwarePaginator<int, object>|null
+     * @return LengthAwarePaginator<int, PlatformAuditLogModel>
      */
-    public function getEntries(): ?LengthAwarePaginator
+    public function getEntries(): LengthAwarePaginator
     {
-        $query = PlatformAudit::query();
-
-        if ($query === null) {
-            return null;
-        }
-
-        if (filled($this->action)) {
-            $query->where('action', 'like', $this->action.'%');
-        }
-
-        if (filled($this->academyId)) {
-            $query->where('academy_id', (int) $this->academyId);
-        }
-
-        return $query->orderByDesc('created_at')->paginate(25);
+        return PlatformAuditLogModel::query()
+            ->with(['user', 'targetAcademy'])
+            ->when(filled($this->action), fn ($query) => $query->where('action', $this->action))
+            ->when(filled($this->academyId), fn ($query) => $query->where('target_academy_id', (int) $this->academyId))
+            ->orderByDesc('created_at')
+            ->paginate(25);
     }
 
     /**
-     * @return array<int, string>
+     * @return array<string, string>
      */
     public function getActionOptions(): array
     {
-        $query = PlatformAudit::query();
-
-        if ($query === null) {
-            return [];
-        }
-
-        return $query->distinct()->orderBy('action')->pluck('action')->all();
+        return collect(AuditAction::cases())
+            ->mapWithKeys(fn (AuditAction $case): array => [$case->value => $case->label()])
+            ->all();
     }
 
     /**

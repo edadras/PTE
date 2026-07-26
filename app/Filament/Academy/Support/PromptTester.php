@@ -38,7 +38,7 @@ final class PromptTester
             return ['ok' => false, 'message' => $e->getMessage()];
         }
 
-        $text = mb_substr($response->text ?? '', 0, 2000);
+        $text = mb_substr($response->text, 0, 2000);
 
         $this->recordResult($prompt, true, $text, $variables);
 

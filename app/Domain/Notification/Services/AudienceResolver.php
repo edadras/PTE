@@ -6,6 +6,7 @@ namespace App\Domain\Notification\Services;
 
 use App\Domain\Identity\Enums\StudentStatus;
 use App\Domain\Identity\Models\Student;
+use Generator;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -78,9 +79,9 @@ final class AudienceResolver
 
     /**
      * @param  array<string, mixed>  $audience
-     * @return \Generator<int, Student>
+     * @return Generator<int, Student>
      */
-    public function each(array $audience = [], int $chunk = 200): \Generator
+    public function each(array $audience = [], int $chunk = 200): Generator
     {
         $lastId = 0;
         $base = $this->query($audience);

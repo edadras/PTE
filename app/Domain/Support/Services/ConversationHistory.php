@@ -9,6 +9,7 @@ use App\Domain\Support\Data\ConversationEntry;
 use App\Domain\Telegram\Enums\MessageDirection;
 use App\Domain\Telegram\Models\TelegramIdentity;
 use App\Domain\Telegram\Models\TelegramMessage;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -106,7 +107,7 @@ final class ConversationHistory
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<TelegramMessage>  $query
+     * @param  Builder<TelegramMessage>  $query
      * @return Collection<int, ConversationEntry>
      */
     private function entries($query, int $limit): Collection

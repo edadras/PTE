@@ -10,6 +10,7 @@ use App\Domain\Tenancy\Models\Module;
 use App\Filament\Platform\Resources\ModuleResource\Pages;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -116,7 +117,7 @@ final class ModuleResource extends Resource
     }
 
     /**
-     * @return array<string, \Filament\Resources\Pages\PageRegistration>
+     * @return array<string, PageRegistration>
      */
     public static function getPages(): array
     {

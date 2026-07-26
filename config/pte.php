@@ -170,6 +170,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Notifications
+    |--------------------------------------------------------------------------
+    |
+    | SMS ships with a null driver. Swapping in a real gateway is a container
+    | binding for SmsDriver — the dispatcher already resolves it.
+    |
+    */
+
+    'notifications' => [
+        'sms' => [
+            'driver' => env('PTE_SMS_DRIVER', 'null'),
+            'sender' => env('PTE_SMS_SENDER'),
+            'api_key' => env('PTE_SMS_API_KEY'),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Data retention (days)
     |--------------------------------------------------------------------------
     */

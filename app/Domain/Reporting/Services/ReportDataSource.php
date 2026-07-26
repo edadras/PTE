@@ -10,6 +10,7 @@ use App\Domain\Assessment\Models\PracticeSession;
 use App\Domain\Identity\Models\Student;
 use App\Domain\Reporting\Enums\ReportType;
 use Generator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 
@@ -226,7 +227,7 @@ final class ReportDataSource
     /**
      * @template TModel of \Illuminate\Database\Eloquent\Model
      *
-     * @param  \Illuminate\Database\Eloquent\Builder<TModel>  $query
+     * @param  Builder<TModel>  $query
      * @return Generator<int, TModel>
      */
     private function cursor($query): Generator

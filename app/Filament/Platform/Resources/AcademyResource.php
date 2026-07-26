@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Platform\Resources;
 
+use App\Domain\Audit\Enums\AuditAction;
 use App\Domain\Commerce\Models\Plan;
 use App\Domain\Learning\Enums\ModuleKey;
 use App\Domain\Learning\Support\ModuleRegistry;
@@ -20,6 +21,7 @@ use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -202,12 +204,10 @@ final class AcademyResource extends Resource
                         app(SuspendAcademy::class)->handle($record, (string) $data['reason']);
 
                         PlatformAudit::record(
-                            action: PlatformAudit::ACTION_ACADEMY_SUSPEND,
+                            action: AuditAction::AcademySuspended,
                             actor: auth()->user() instanceof User ? auth()->user() : null,
-                            academyId: (int) $record->getKey(),
-                            subjectType: Academy::class,
-                            subjectId: (int) $record->getKey(),
-                            newValues: ['reason' => $data['reason']],
+                            target: $record,
+                            payload: ['reason' => $data['reason']],
                         );
 
                         Notification::make()->success()->title(__('panel.academies.notify.suspended'))->send();
@@ -223,11 +223,9 @@ final class AcademyResource extends Resource
                         app(ResumeAcademy::class)->handle($record);
 
                         PlatformAudit::record(
-                            action: PlatformAudit::ACTION_ACADEMY_RESUME,
+                            action: AuditAction::AcademyResumed,
                             actor: auth()->user() instanceof User ? auth()->user() : null,
-                            academyId: (int) $record->getKey(),
-                            subjectType: Academy::class,
-                            subjectId: (int) $record->getKey(),
+                            target: $record,
                         );
 
                         Notification::make()->success()->title(__('panel.academies.notify.resumed'))->send();
@@ -253,12 +251,10 @@ final class AcademyResource extends Resource
                         );
 
                         PlatformAudit::record(
-                            action: PlatformAudit::ACTION_ACADEMY_CLONE,
+                            action: AuditAction::AcademyCloned,
                             actor: auth()->user() instanceof User ? auth()->user() : null,
-                            academyId: (int) $clone->getKey(),
-                            subjectType: Academy::class,
-                            subjectId: (int) $record->getKey(),
-                            newValues: ['clone_id' => $clone->getKey()],
+                            target: $clone,
+                            payload: ['source_academy_id' => $record->getKey()],
                         );
 
                         Notification::make()->success()->title(__('panel.academies.notify.cloned'))->send();
@@ -314,7 +310,7 @@ final class AcademyResource extends Resource
     }
 
     /**
-     * @return array<string, \Filament\Resources\Pages\PageRegistration>
+     * @return array<string, PageRegistration>
      */
     public static function getPages(): array
     {
