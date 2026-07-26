@@ -72,18 +72,12 @@ final class HandleIncomingUpdate
         }
 
         match ($decision->intent) {
-            RoutingDecision::INTENT_DEEP_LINK, RoutingDecision::INTENT_START
-                => $this->handleStart($bot, $identity, $update, $context, $decision),
-            RoutingDecision::INTENT_GLOBAL_COMMAND
-                => $this->handleGlobalCommand($bot, $identity, $update, $context, $decision),
-            RoutingDecision::INTENT_CALLBACK
-                => $this->handleCallback($bot, $identity, $update, $context, $decision),
-            RoutingDecision::INTENT_FLOW_RESUME
-                => $this->handleFlowResume($bot, $update),
-            RoutingDecision::INTENT_MENU_ITEM
-                => $this->runMenuItem($bot, $identity, $update, $context, (int) $decision->get('menu_item_id')),
-            RoutingDecision::INTENT_FALLBACK
-                => $this->handleFallback($bot, $update, $context),
+            RoutingDecision::INTENT_DEEP_LINK, RoutingDecision::INTENT_START => $this->handleStart($bot, $identity, $update, $context, $decision),
+            RoutingDecision::INTENT_GLOBAL_COMMAND => $this->handleGlobalCommand($bot, $identity, $update, $context, $decision),
+            RoutingDecision::INTENT_CALLBACK => $this->handleCallback($bot, $identity, $update, $context, $decision),
+            RoutingDecision::INTENT_FLOW_RESUME => $this->handleFlowResume($bot, $update),
+            RoutingDecision::INTENT_MENU_ITEM => $this->runMenuItem($bot, $identity, $update, $context, (int) $decision->get('menu_item_id')),
+            RoutingDecision::INTENT_FALLBACK => $this->handleFallback($bot, $update, $context),
             default => null,
         };
 

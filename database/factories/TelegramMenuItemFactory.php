@@ -7,7 +7,7 @@ namespace Database\Factories;
 use App\Domain\Telegram\Enums\MenuActionType;
 use App\Domain\Telegram\Models\TelegramMenu;
 use App\Domain\Telegram\Models\TelegramMenuItem;
-use App\Domain\Tenancy\Models\Academy;
+use Database\Factories\Concerns\ResolvesAcademy;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 final class TelegramMenuItemFactory extends Factory
 {
+    use ResolvesAcademy;
+
     protected $model = TelegramMenuItem::class;
 
     /**
@@ -23,7 +25,7 @@ final class TelegramMenuItemFactory extends Factory
     public function definition(): array
     {
         return [
-            'academy_id' => Academy::factory(),
+            'academy_id' => $this->resolveAcademy(),
             'menu_id' => TelegramMenu::factory(),
             'parent_id' => null,
             'label' => fake()->words(2, true),

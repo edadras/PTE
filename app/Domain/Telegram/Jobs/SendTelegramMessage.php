@@ -118,7 +118,13 @@ final class SendTelegramMessage extends TenantAwareJob
     {
         $message = OutgoingMessage::fromArray($this->message);
 
-        $this->countBroadcast($message, 'failed');
+        // failed() runs outside the tenant middleware, so a counter update must
+        // never be the reason a failure goes unlogged.
+        try {
+            $this->countBroadcast($message, 'failed');
+        } catch (Throwable) {
+            // Intentionally swallowed; the log line below is what matters.
+        }
 
         Log::warning('Telegram message could not be delivered.', [
             'academy_id' => $this->academyId,

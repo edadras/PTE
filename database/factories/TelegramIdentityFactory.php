@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Domain\Telegram\Models\TelegramIdentity;
-use App\Domain\Tenancy\Models\Academy;
+use Database\Factories\Concerns\ResolvesAcademy;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 final class TelegramIdentityFactory extends Factory
 {
+    use ResolvesAcademy;
+
     protected $model = TelegramIdentity::class;
 
     /**
@@ -23,7 +25,7 @@ final class TelegramIdentityFactory extends Factory
         $userId = fake()->unique()->numberBetween(10_000_000, 9_999_999_999);
 
         return [
-            'academy_id' => Academy::factory(),
+            'academy_id' => $this->resolveAcademy(),
             'student_id' => null,
             'telegram_user_id' => $userId,
             // In a private chat Telegram uses the user id as the chat id.

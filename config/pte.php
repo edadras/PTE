@@ -150,6 +150,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Commerce
+    |--------------------------------------------------------------------------
+    |
+    | Rates are basis points (900 = 9.00%) so nothing here is ever a float.
+    | usd_to_irr is a placeholder: AI spend is billed in USD while academies
+    | pay in IRR, so profitability reporting needs a real FX feed before these
+    | numbers can be trusted for pricing decisions.
+    |
+    */
+
+    'commerce' => [
+        'tax_rate_bp' => (int) env('PTE_TAX_RATE_BP', 900),
+        'default_gateway' => env('PTE_DEFAULT_GATEWAY', 'zarinpal'),
+        'platform_fee_bp' => (int) env('PTE_PLATFORM_FEE_BP', 300),
+        'profitability_alert_ratio' => (float) env('PTE_PROFITABILITY_ALERT_RATIO', 0.5),
+        'usd_to_irr' => (int) env('PTE_USD_TO_IRR', 600_000),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Data retention (days)
     |--------------------------------------------------------------------------
     */

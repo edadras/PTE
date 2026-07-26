@@ -14,6 +14,8 @@ use Illuminate\Support\Str;
  */
 final class AcademyBrandFactory extends Factory
 {
+    use \Database\Factories\Concerns\ResolvesAcademy;
+
     protected $model = AcademyBrand::class;
 
     /**
@@ -24,7 +26,7 @@ final class AcademyBrandFactory extends Factory
         $name = fake()->company();
 
         return [
-            'academy_id' => AcademyFactory::new(),
+            'academy_id' => $this->resolveAcademy(),
             'display_name' => $name,
             'short_name' => Str::limit($name, 40, ''),
             'tagline' => fake()->catchPhrase(),

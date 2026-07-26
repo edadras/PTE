@@ -164,10 +164,17 @@ final class ReportCardBuilder
 
         return [
             'id' => (int) $session->student_id,
-            'name' => $student instanceof Model
-                ? (string) ($student->getAttribute('full_name') ?? $student->getAttribute('name') ?? '')
-                : '',
+            'name' => $student instanceof Model ? $this->nameOf($student) : '',
         ];
+    }
+
+    private function nameOf(Model $student): string
+    {
+        if (method_exists($student, 'fullName')) {
+            return (string) $student->fullName();
+        }
+
+        return (string) ($student->getAttribute('full_name') ?? $student->getAttribute('name') ?? '');
     }
 
     /**

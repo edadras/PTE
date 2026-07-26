@@ -15,6 +15,8 @@ use Illuminate\Support\Str;
  */
 final class StudentFactory extends Factory
 {
+    use \Database\Factories\Concerns\ResolvesAcademy;
+
     protected $model = Student::class;
 
     /**
@@ -25,7 +27,7 @@ final class StudentFactory extends Factory
         return [
             // Lets `Student::factory()->create()` stand on its own in tests;
             // `->for($academy)` or `->has()` overrides it.
-            'academy_id' => AcademyFactory::new(),
+            'academy_id' => $this->resolveAcademy(),
             'student_code' => 'ST'.Str::upper(Str::random(6)),
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),

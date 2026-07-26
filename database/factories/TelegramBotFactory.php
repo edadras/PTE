@@ -6,7 +6,7 @@ namespace Database\Factories;
 
 use App\Domain\Telegram\Enums\BotHealthStatus;
 use App\Domain\Telegram\Models\TelegramBot;
-use App\Domain\Tenancy\Models\Academy;
+use Database\Factories\Concerns\ResolvesAcademy;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -15,6 +15,8 @@ use Illuminate\Support\Str;
  */
 final class TelegramBotFactory extends Factory
 {
+    use ResolvesAcademy;
+
     protected $model = TelegramBot::class;
 
     /**
@@ -25,7 +27,7 @@ final class TelegramBotFactory extends Factory
         $token = fake()->numerify('##########').':'.Str::random(35);
 
         return [
-            'academy_id' => Academy::factory(),
+            'academy_id' => $this->resolveAcademy(),
             'public_id' => (string) Str::ulid(),
             'token' => $token,
             'token_last4' => mb_substr($token, -4),

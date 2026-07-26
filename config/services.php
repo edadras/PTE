@@ -65,4 +65,11 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'telegram_payments' => [
+        'provider_token' => env('TELEGRAM_PROVIDER_TOKEN'),
+        // Per-academy bot tokens override this via the payment request metadata.
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'secret_token' => env('TELEGRAM_WEBHOOK_SECRET'),
+    ],
+
 ];

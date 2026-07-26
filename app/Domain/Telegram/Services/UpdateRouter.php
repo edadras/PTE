@@ -61,6 +61,13 @@ final class UpdateRouter
             return RoutingDecision::globalCommand($command);
         }
 
+        // The "🏠 back to menu" button is a global command wearing a label. Docs
+        // §4 is explicit that it has to work mid-flow too — a student who cannot
+        // get out of a conversation abandons the bot entirely.
+        if ($update->text !== null && $this->isEscapeLabel($update->text)) {
+            return RoutingDecision::globalCommand('/menu');
+        }
+
         // 3. Callback queries carry their own routing information.
         if ($update->type === UpdateType::CallbackQuery) {
             $data = $update->callbackData === null ? null : CallbackData::decode($update->callbackData);
@@ -91,6 +98,26 @@ final class UpdateRouter
 
         // 6. Anything else: unknown commands, free text, media outside a flow.
         return RoutingDecision::fallback();
+    }
+
+    /**
+     * Matched against every locale, not just the active one: the bot's locale
+     * follows the academy, but the keyboard a student is looking at may have
+     * been rendered before it changed.
+     */
+    private function isEscapeLabel(string $text): bool
+    {
+        $needle = mb_strtolower(trim($text));
+
+        foreach (['en', 'fa'] as $locale) {
+            $label = __('telegram.back_to_menu', [], $locale);
+
+            if (is_string($label) && mb_strtolower(trim($label)) === $needle) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function routeNonConversational(IncomingUpdate $update): RoutingDecision

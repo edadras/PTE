@@ -75,7 +75,7 @@ final class TelegramBot extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (self $bot): void {
+        self::creating(function (self $bot): void {
             if (blank($bot->public_id)) {
                 $bot->public_id = (string) Str::ulid();
             }

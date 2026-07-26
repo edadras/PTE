@@ -54,11 +54,13 @@ final class StartPracticeSession
         $requested = $count > 0 ? $count : $config->questionsPerSession;
         $requested = $this->applyDailyCap($student, $academy, $config, $requested);
 
+        // The repeat cooldown is expressed as options rather than a pre-computed
+        // exclusion list: QuestionSelector owns that query and can apply it
+        // inside the draw instead of after it.
         $questions = $this->selector->select($target, $student, $requested, [
             'mode' => $config->selection->value,
-            'exclude' => $excluded = $this->recentlyAnswered($student, $config),
-            'exclude_question_ids' => $excluded,
-            'cooldown_days' => $config->repeatAfterDays,
+            'allow_repeats' => $config->allowsRepeat(),
+            'repeat_after_days' => $config->repeatAfterDays,
             'types' => $type !== null ? [$type->value] : $config->enabledTypes,
         ]);
 
@@ -175,25 +177,5 @@ final class StartPracticeSession
         }
 
         return min($requested, $remaining);
-    }
-
-    /**
-     * Questions this student answered inside the repeat cooldown window.
-     *
-     * @return array<int, int>
-     */
-    private function recentlyAnswered(Student $student, PracticeConfig $config): array
-    {
-        if ($config->allowsRepeat()) {
-            return [];
-        }
-
-        return Answer::query()
-            ->where('student_id', $student->getKey())
-            ->where('created_at', '>=', now()->subDays($config->repeatAfterDays))
-            ->distinct()
-            ->pluck('question_id')
-            ->map(static fn (mixed $id): int => (int) $id)
-            ->all();
     }
 }

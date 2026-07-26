@@ -9,6 +9,7 @@ use App\Domain\Telegram\Jobs\RunBroadcast;
 use App\Domain\Telegram\Models\Broadcast;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Domain\Tenancy\TenantContext;
+use DateTimeInterface;
 use Illuminate\Bus\Batch;
 use Illuminate\Support\Facades\Bus;
 use RuntimeException;
@@ -87,7 +88,7 @@ final class StartBroadcast
         string $title,
         array $content,
         array $audienceFilter = [],
-        ?\DateTimeInterface $scheduledAt = null,
+        ?DateTimeInterface $scheduledAt = null,
         ?int $userId = null,
     ): Broadcast {
         return Broadcast::query()->create([

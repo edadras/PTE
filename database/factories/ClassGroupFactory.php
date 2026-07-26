@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 final class ClassGroupFactory extends Factory
 {
+    use \Database\Factories\Concerns\ResolvesAcademy;
+
     protected $model = ClassGroup::class;
 
     /**
@@ -22,7 +24,7 @@ final class ClassGroupFactory extends Factory
     public function definition(): array
     {
         return [
-            'academy_id' => AcademyFactory::new(),
+            'academy_id' => $this->resolveAcademy(),
             'name' => fake()->words(2, true).' '.fake()->randomElement(['A1', 'B2', 'Intensive']),
             'course_id' => null,
             'teacher_id' => null,

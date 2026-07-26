@@ -32,7 +32,8 @@ final class ScoringDispatcher
 {
     private const AI_SCORING_JOB = 'App\Domain\AI\Jobs\ScoreAnswerWithAi';
 
-    private const TRANSCRIBE_JOB = 'App\Domain\AI\Jobs\TranscribeAnswer';
+    /** Entry point of the audio pipeline: convert → quality gate → transcribe. */
+    private const AUDIO_PIPELINE_JOB = 'App\Domain\AI\Jobs\ProcessAnswerAudio';
 
     private const TELEGRAM_DOWNLOAD_JOB = 'App\Domain\Telegram\Jobs\DownloadTelegramFile';
 
@@ -157,28 +158,35 @@ final class ScoringDispatcher
     }
 
     /**
-     * Download → convert → transcribe. Each step re-enters this dispatcher when
-     * it finishes, so the chain is expressed once here and not duplicated in
-     * every job.
+     * Download → convert → quality gate → transcribe → score.
+     *
+     * Once the audio is on the tenant disk the AI context owns the rest of the
+     * chain, so there is exactly one hand-off here. The download branch is the
+     * exception: DownloadTelegramFile returns a path rather than attaching it,
+     * so the Telegram layer writes media_path and calls retry() to come back in.
      */
     private function dispatchMediaPipeline(Answer $answer): void
     {
         $mediaQueue = (string) config('pte.queues.media', 'media');
 
-        if (blank($answer->media_path) && filled($fileId = $answer->payloadValue('telegram_file_id') ?? $answer->payloadValue('file_id'))) {
-            $this->dispatchByName(self::TELEGRAM_DOWNLOAD_JOB, [
+        if (filled($answer->media_path)) {
+            $this->dispatchByName(self::AUDIO_PIPELINE_JOB, [
                 $answer->academy_id,
-                (string) $fileId,
                 $answer->getKey(),
             ], $mediaQueue);
 
             return;
         }
 
-        if (filled($answer->media_path)) {
-            $this->dispatchByName(self::TRANSCRIBE_JOB, [
+        $fileId = $answer->payloadValue('telegram_file_id') ?? $answer->payloadValue('file_id');
+        $botId = $answer->payloadValue('telegram_bot_id') ?? $answer->payloadValue('bot_id');
+
+        if (filled($fileId) && filled($botId)) {
+            $this->dispatchByName(self::TELEGRAM_DOWNLOAD_JOB, [
                 $answer->academy_id,
-                $answer->getKey(),
+                (int) $botId,
+                (string) $fileId,
+                'answers',
             ], $mediaQueue);
 
             return;

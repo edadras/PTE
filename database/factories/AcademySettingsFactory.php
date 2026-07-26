@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 final class AcademySettingsFactory extends Factory
 {
+    use \Database\Factories\Concerns\ResolvesAcademy;
+
     protected $model = AcademySettings::class;
 
     /**
@@ -20,7 +22,7 @@ final class AcademySettingsFactory extends Factory
     public function definition(): array
     {
         return [
-            'academy_id' => AcademyFactory::new(),
+            'academy_id' => $this->resolveAcademy(),
             'locale' => 'fa',
             'currency' => 'IRR',
             'practice_config' => ['daily_goal' => 10, 'allow_retry' => true],
